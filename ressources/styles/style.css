@@ -1113,6 +1113,32 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
 .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 /* ==========================================================================
+   MENU BURGER (checkbox hack — 100% CSS, zéro JavaScript)
+   ========================================================================== */
+/* La checkbox sert d'état (cochée = menu ouvert). Toujours invisible. */
+.menu-burger-input { display: none; }
+
+/* Le label-bouton burger : masqué par défaut, apparaît uniquement sur mobile via media query. */
+.menu-burger-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 32px;
+    height: 26px;
+    cursor: pointer;
+    padding: 4px 0;
+    z-index: 1000;
+}
+.menu-burger-trait {
+    display: block;
+    height: 3px;
+    width: 100%;
+    background-color: var(--color-primary-dark);
+    border-radius: 2px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* ==========================================================================
    RESPONSIVE DESIGN — Mobile First inversé (desktop-first)
    3 paliers : tablette (≤ 992px), mobile (≤ 768px), petit mobile (≤ 480px)
    ========================================================================== */
@@ -1122,20 +1148,6 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
 
     /* Conteneur principal : réduire le padding latéral */
     .container { padding: 1rem; }
-
-    /* En-tête principal : barre de nav passe en colonne */
-    .main-header {
-        flex-direction: column;
-        gap: 1rem;
-        padding: 1rem;
-    }
-    .main-nav { width: 100%; }
-    .nav-menu {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.5rem 1rem;
-    }
-    .header-actions { width: 100%; justify-content: center; }
 
     /* Dashboard 2 colonnes → 1 colonne sur tablette */
     .dashboard-grid,
@@ -1147,7 +1159,7 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
     .features-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* --- MOBILE (≤ 768px) ------------------------------------------------------ */
+/* --- MOBILE (≤ 768px) — Activation du menu burger ------------------------- */
 @media (max-width: 768px) {
 
     body { font-size: 15px; }
@@ -1156,6 +1168,64 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
     h1 { font-size: 1.7rem; }
     h2 { font-size: 1.4rem; }
     h3 { font-size: 1.15rem; }
+
+    /* En-tête : disposition logo à gauche + burger à droite */
+    .main-header {
+        flex-wrap: wrap;
+        position: relative;
+        padding: 1rem;
+    }
+
+    /* On affiche le bouton burger */
+    .menu-burger-btn { display: flex; }
+
+    /* Menu nav et boutons d'action : masqués par défaut, repliés en panneau */
+    .main-nav,
+    .header-actions {
+        display: none;
+        width: 100%;
+        flex-basis: 100%;
+        order: 3;
+    }
+
+    /* Quand la checkbox est cochée → on déploie le menu + les actions */
+    .menu-burger-input:checked ~ .main-nav,
+    .menu-burger-input:checked ~ .header-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        margin-top: 1rem;
+        animation: deroulerMenu 0.25s ease-out;
+    }
+
+    /* Animation des 3 traits → croix (X) quand le menu est ouvert */
+    .menu-burger-input:checked ~ .menu-burger-btn .menu-burger-trait:nth-child(1) {
+        transform: translateY(10px) rotate(45deg);
+    }
+    .menu-burger-input:checked ~ .menu-burger-btn .menu-burger-trait:nth-child(2) {
+        opacity: 0;
+    }
+    .menu-burger-input:checked ~ .menu-burger-btn .menu-burger-trait:nth-child(3) {
+        transform: translateY(-10px) rotate(-45deg);
+    }
+
+    /* Le menu déployé : liste verticale */
+    .nav-menu {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 0;
+    }
+    .nav-link {
+        display: block;
+        text-align: center;
+        padding: 0.8rem;
+        border-bottom: 1px solid var(--color-bg-gradient-end);
+    }
+
+    /* Boutons connexion/déconnexion : largeur complète */
+    .header-actions .btn,
+    .header-actions .link-login { width: 100%; text-align: center; }
 
     /* En-tête de page (titre + bouton d'action) : empilement vertical */
     .container .header {
@@ -1180,7 +1250,7 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
     .hero-actions { flex-direction: column; }
     .hero-actions .btn { width: 100%; }
 
-    /* Tableaux : forcer un scroll horizontal et réduire la police */
+    /* Tableaux : réduire la police */
     table { font-size: 0.85rem; }
     table th, table td { padding: 0.5rem; }
 
@@ -1195,6 +1265,12 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
 
     /* Footer : recentrage propre */
     .footer-content { text-align: center; padding: 0 1rem; }
+}
+
+/* Animation d'ouverture du panneau menu */
+@keyframes deroulerMenu {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 /* --- PETIT MOBILE (≤ 480px) ------------------------------------------------ */
@@ -1223,10 +1299,6 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
     /* Badge utilisateur : compacter */
     .user-status-badge { font-size: 0.85rem; padding: 0.4rem 0.8rem; }
     .status-text { display: none; } /* On masque "Connecté en tant que" sur très petit écran */
-
-    /* Navigation : empiler les items du menu */
-    .nav-menu { flex-direction: column; align-items: stretch; width: 100%; }
-    .nav-link { display: block; text-align: center; padding: 0.6rem; }
 
     /* Formulaires : champs pleine largeur */
     input, select, textarea { width: 100%; }

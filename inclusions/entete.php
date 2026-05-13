@@ -17,7 +17,15 @@
         <img src="ressources/images/logo.png" alt="Logo La Bòstia Verda" class="header-logo">
         <strong>La Bòstia Verda</strong>
     </a>
-    
+
+    <!-- Checkbox cachée + label : permet d'ouvrir/fermer le menu en CSS pur (sans JS) -->
+    <input type="checkbox" id="menu-burger" class="menu-burger-input" aria-label="Ouvrir le menu">
+    <label for="menu-burger" class="menu-burger-btn" aria-hidden="true">
+        <span class="menu-burger-trait"></span>
+        <span class="menu-burger-trait"></span>
+        <span class="menu-burger-trait"></span>
+    </label>
+
     <nav class="main-nav">
         <ul class="nav-menu">
             <?php 
