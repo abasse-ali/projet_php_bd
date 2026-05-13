@@ -1,0 +1,1234 @@
+/* ==========================================================================
+   VARIABLES DE DESIGN (Couleurs, Typographie)
+   ========================================================================== */
+:root {
+    /* Palette de couleurs */
+    --color-primary-dark: #0D2C22; /* Vert forêt profond */
+    --color-bg-light: #F0EDE8; /* Crème/Sage clair */
+    --color-bg-gradient-end: #E8E5DF; /* Dégradé Sage (pour les dégradés existants) */
+    --color-accent: #BC6C4D; /* Orange rouille */
+    --color-text-light: #F5F1E9; /* Ivoire clair / Blanc cassé */
+    --color-text-dark: #0D2C22;
+
+    /* New Soft SaaS Colors */
+    --color-page-bg: #FDFBF7; /* Beige très clair/crème */
+    --color-heading-main: #153023; /* Vert Forêt très sombre */
+    --color-text-soft-gray: #6b7280; /* Gris moyen doux */
+    --color-card-bg: #FFFFFF; /* Blanc pur pour les cartes */
+    --color-input-bg: #F9FAFB; /* Gris très clair pour les inputs */
+    --color-red-soft-bg: #fef2f2; /* Rouge très pâle pour alertes */
+    --color-red-soft-text: #dc2626; /* Rouge pour texte alerte */
+    --color-green-soft-bg: #ecfdf5; /* Vert très clair pour icônes */
+    --color-green-soft-text: #047857; /* Vert pour texte icônes */
+    --color-orange-soft-bg: #fff7ed; /* Orange très pâle pour badges */
+    --color-orange-soft-text: #c2410c; /* Orange pour texte badges */
+
+    /* Typographie */
+    --font-heading: 'Georgia', 'Times New Roman', serif; /* Douce et organique */
+    --font-body: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; /* Moderne et propre */
+}
+
+/* ==========================================================================
+   RÉINITIALISATION & STYLES DE BASE
+   ========================================================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-body);
+    color: var(--color-text-dark);
+    background-color: var(--color-page-bg); /* Nouveau fond de page */
+    line-height: 1.6;
+    text-rendering: optimizeLegibility; /* Améliore le rendu du texte */
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    font-weight: normal;
+    margin-bottom: 1rem;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.3s ease;
+}
+
+img, svg {
+    max-width: 100%;
+    display: block;
+}
+
+/* ==========================================================================
+   CLASSES UTILITAIRES (Espacements, Flex, Textes) - DRY
+   ========================================================================== */
+.m-0 { margin: 0 !important; }
+.mt-0 { margin-top: 0 !important; }
+.mt-1 { margin-top: 0.5rem !important; }
+.mt-2 { margin-top: 1rem !important; }
+.mt-3 { margin-top: 1.5rem !important; }
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 0.5rem !important; }
+.mb-2 { margin-bottom: 1rem !important; }
+.mb-3 { margin-bottom: 1.5rem !important; }
+.mb-negative { margin-bottom: -1rem !important; }
+
+.w-100 { width: 100% !important; }
+.h-100 { height: 100% !important; }
+.d-inline-block { display: inline-block !important; }
+.hidden { display: none !important; }
+
+.text-center { text-align: center !important; }
+.text-muted { color: var(--color-text-soft-gray) !important; }
+.text-italic { font-style: italic !important; }
+
+.col-span-full { grid-column: 1 / -1 !important; }
+
+/* ==========================================================================
+   GRILLES DE DISPOSITION (LAYOUTS)
+   ========================================================================== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+.main-column, .side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.main-column > .card, .side-column > .card {
+    margin-bottom: 0;
+}
+
+/* ==========================================================================
+   COMPOSANTS RÉUTILISABLES
+   ========================================================================== */
+.btn {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Ombre subtile pour la profondeur */
+}
+
+.btn-primary, .btn-secondary { border-radius: 12px; } /* Coins arrondis pour les boutons principaux */
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15); /* Ombre plus prononcée au survol */
+}
+
+.btn-primary {
+    background-color: var(--color-accent);
+    color: var(--color-text-light);
+}
+
+.btn-primary:hover { /* Assombrir un peu plus au survol */
+    background-color: #9e6044;
+}
+
+.btn-secondary {
+    background-color: var(--color-primary-dark);
+    color: var(--color-text-light);
+}
+
+.btn-secondary:hover { /* Assombrir un peu plus au survol */
+    background-color: #0a221b;
+}
+
+/* ==========================================================================
+   EN-TÊTE ET NAVIGATION (HEADER)
+   ========================================================================== */
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 5%;
+    background-color: var(--color-text-light);
+    color: var(--color-primary-dark); /* Texte plus foncé pour le contraste */
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08); /* Ombre plus marquée */
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.main-nav ul {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+}
+
+.main-nav a:hover, .main-nav a:focus {
+    color: var(--color-accent);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Affinage du bouton dans la navbar */
+.header-actions .btn {
+    padding: 0.6rem 1.2rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.link-login {
+    font-weight: bold; margin-right: 1rem; color: var(--color-primary-dark); text-decoration: none;
+}
+.link-login:hover { color: var(--color-accent); }
+
+/* ==========================================================================
+   SECTION HÉROÏQUE (HERO)
+   ========================================================================== */
+.hero-section {
+    background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-gradient-end) 100%);
+    padding: 6rem 5%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+}
+
+.hero-section h1 {
+    font-size: 3.5rem;
+    color: var(--color-primary-dark);
+    max-width: 800px;
+    margin-bottom: 1.5rem;
+}
+
+.hero-section p {
+    font-size: 1.2rem;
+    max-width: 700px;
+    margin-bottom: 2.5rem;
+    color: #333;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 1.5rem;
+}
+
+/* ==========================================================================
+   SECTION STATISTIQUES (GRID 4 COLONNES)
+   ========================================================================== */
+.stats-section {
+    background-color: var(--color-primary-dark);
+    color: var(--color-text-light);
+    padding: 4rem 5%;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.stat-card svg {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem auto;
+    fill: var(--color-text-light);
+    flex-shrink: 0;
+}
+
+.stat-number {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.1;
+}
+
+.stat-label {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+/* ==========================================================================
+   STYLES APPLICATIFS (Login, Dashboard, Formulaires, Tables)
+   Adaptés à la nouvelle charte graphique
+   ========================================================================== */
+
+/* Conteneur principal des pages applicatives */
+.container {
+    max-width: 1200px;
+    margin: 1.5rem auto 3rem auto; /* Marge supérieure réduite pour éviter l'effet "rallonge" */
+    padding: 0 5%;
+    min-height: 60vh;
+}
+
+.container .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--color-bg-gradient-end);
+    padding-bottom: 1rem;
+}
+
+.container .header h1 {
+    margin-bottom: 0.2rem;
+    color: var(--color-primary-dark);
+}
+
+/* --- CARTES ET GRILLES (Dashboard, Outils, etc.) --- */
+.card, .form-card {
+    background: #FFFFFF; /* Fond blanc pur */
+    padding: 24px;
+    border-radius: 12px; /* Coins arrondis xl */
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); /* Ombre très douce */
+    margin-bottom: 2rem;
+    border: none; /* Suppression de la bordure pour effet flat */
+    transition: all 0.3s ease;
+}
+
+/* --- ALIGNEMENTS & TYPOGRAPHIE --- */
+.flex-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    color: var(--color-primary-dark);
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+/* --- UTILITAIRES ICÔNES SVG STRICTS --- */
+.icon-sm { width: 16px !important; height: 16px !important; flex-shrink: 0; }
+.icon-md { width: 24px !important; height: 24px !important; flex-shrink: 0; }
+.icon-lg { width: 32px !important; height: 32px !important; flex-shrink: 0; }
+.icon-xl { width: 48px !important; height: 48px !important; flex-shrink: 0; }
+
+/* --- COULEURS DUOTONE HARMONIEUSES POUR SVG --- */
+.icon-duotone-primary { stroke: var(--color-primary-dark); fill: #d1fae5; }
+.icon-duotone-accent { stroke: var(--color-accent); fill: #ffedd5; }
+.icon-duotone-sun { stroke: #d97706; fill: #fde68a; }
+.icon-duotone-water { stroke: #0284c7; fill: #bae6fd; }
+.icon-duotone-danger { stroke: #dc2626; fill: #fecaca; }
+.icon-duotone-surface { stroke: #6366f1; fill: #e0e7ff; }
+.icon-duotone-date { stroke: #8b5cf6; fill: #ede9fe; }
+.icon-duotone-quality { stroke: #22c55e; fill: #dcfce7; }
+
+.flex-title svg { stroke: var(--color-primary-dark); }
+
+/* --- LISTES D'INFORMATIONS (Pour les cartes) --- */
+.info-list { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem; }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.info-item { display: flex; align-items: center; gap: 0.8rem; color: var(--text-main); font-size: 0.95rem; }
+.info-item svg { stroke: var(--color-text-soft-gray); }
+
+/* --- GRILLE POUR LES INFOS PARCELLE --- */
+.parcelle-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Retour en grille 2x2 plus aérée */
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+.detail-item { display: flex; flex-direction: column; gap: 0.1rem; }
+.detail-label { color: #6b7280; font-size: 0.875rem; font-weight: 500; display: flex; align-items: center; gap: 0.4rem; text-transform: none; letter-spacing: normal; }
+.detail-value { color: #111827; font-size: 1.125rem; font-weight: 600; display: block; padding-left: 1.5rem; /* Aligne le texte avec le texte du label, sans l'icône */ }
+
+.form-grid-half {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.form-grid-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+/* --- CARTE "MÉTÉO & ARROSAGE" --- */
+.meteo-temp { font-size: 2rem; font-weight: bold; color: var(--color-accent); line-height: 1; }
+.meteo-advice-box {
+    background-color: var(--color-input-bg); /* Gris très clair */
+    border-radius: 8px; /* rounded-lg */
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+    color: var(--color-text-soft-gray);
+    margin-top: 1.5rem;
+}
+
+.meteo-stat { display: flex; flex-direction: row; align-items: center; gap: 0.75rem; }
+.meteo-divider { width: 2px; height: 50px; background-color: #f3f4f6; border-radius: 1px; }
+.meteo-flex-around { display: flex; align-items: center; justify-content: space-around; margin: 0.5rem 0; }
+
+.outils-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+}
+
+/* --- FORMULAIRES --- */
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--color-primary-dark);
+}
+
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], select {
+    width: 100%;
+    height: 48px; /* Hauteur homogène */
+    padding: 0 1rem; /* Padding interne */
+    margin-bottom: 1.2rem; /* Garde l'espacement entre les inputs */
+    border: none; /* Pas de bordure forte */
+    border-radius: 12px; /* Coins bien arrondis (rounded-xl) */
+    font-family: var(--font-body);
+    background-color: var(--color-input-bg); /* Fond gris très clair */
+    transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+    box-shadow: none; /* Pas d'ombre par défaut */
+}
+
+input:focus, select:focus {
+    outline: none;
+    border: 1px solid var(--color-accent); /* Fine bordure accentuée au focus */
+    box-shadow: 0 0 0 3px rgba(188, 108, 77, 0.15); /* Ombre plus douce au focus */
+    background-color: var(--color-card-bg); /* Fond blanc au focus */
+}
+
+.input-small { width: 100px !important; }
+
+button {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    background-color: var(--color-primary-dark);
+    color: var(--color-text-light);
+    border: none;
+    border-radius: 12px; /* Coins bien arrondis (rounded-xl) */
+    cursor: pointer;
+    font-weight: bold;
+    font-family: var(--font-body);
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Ombre subtile */
+    text-align: center; /* Centrage du texte */
+    width: 100%;
+    height: 48px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+button:hover { background-color: #081d16; }
+
+.btn-primary-alt { background-color: var(--color-accent); }
+.btn-primary-alt:hover { background-color: #a35a3d; }
+
+.btn-small { padding: 0.4rem 0.8rem; font-size: 0.9rem; width: auto; }
+
+.btn-danger { background-color: #991b1b; }
+.btn-outline-danger {
+    background-color: transparent;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    box-shadow: none;
+    height: auto;
+    font-weight: 500;
+    border-radius: 12px; /* Coins bien arrondis (rounded-xl) */
+}
+.btn-outline-danger:hover { background-color: #fef2f2; color: #b91c1c; border-color: #f87171; box-shadow: none; }
+.btn-planter { margin-top: 1.5rem; } /* Espacement pour le bouton planter */
+
+.btn-danger:hover { background-color: #7f1d1d; }
+
+.btn-icon-text { display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.btn-icon-text-left { display: flex; align-items: center; justify-content: flex-start; gap: 0.3rem; }
+
+.form-inline {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.form-inline-spaced { gap: 1.5rem; align-items: flex-start; margin-top: 1rem; }
+.form-group-flex { flex: 1; }
+.form-inline-contribution input { margin-bottom: 0; flex: 2; }
+.form-inline-contribution input[type="number"] { flex: 1; }
+
+.form-inline-action { margin: 0; display: inline; }
+.form-inline select, .form-inline input { margin-bottom: 0; width: auto; }
+.form-inline button { width: auto; padding: 0.5rem 1rem; }
+
+/* --- TABLES --- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem; /* Garde la marge */
+    border-radius: 8px; /* Bords arrondis pour la table */
+    overflow: hidden; /* Important pour que les bords arrondis soient visibles */
+}
+
+th, td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-bg-gradient-end); /* Bordure de séparation */
+}
+
+th {
+    background-color: var(--color-bg-light);
+    color: var(--color-primary-dark);
+    font-family: var(--font-heading);
+    font-weight: 600; /* Texte en gras pour les en-têtes */
+    font-size: 1.1rem;
+}
+
+/* --- BADGES ET ALERTES --- */
+.badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem; width: max-content; } /* Badges pilules */
+.badge-croissance { background-color: var(--color-green-soft-bg); color: var(--color-green-soft-text); border: 1px solid #bbf7d0; }
+.badge-recolte { background-color: #fef3c7; color: #854d0e; }
+.badge-terminee { background-color: #e5e7eb; color: #4b5563; } /* Nouveau badge pour statut terminé */
+
+/* Icônes SVG inline (remplacent les anciens emojis) */
+/* !important nécessaire pour écraser la règle globale `img, svg { display: block }` */
+svg.icon { display: inline-block !important; vertical-align: middle; width: 1em !important; height: 1em !important; flex-shrink: 0; }
+h1 .icon, h2 .icon, h3 .icon { margin-right: 0.4rem; }
+.alert .icon { margin-right: 0.4rem; }
+.icon-warning { color: #c2410c; }
+.icon-check { color: #16a34a; }
+.alert-error .icon-warning, .alert-error .icon-check { color: inherit; }
+.alert-success .icon-warning, .alert-success .icon-check { color: inherit; }
+
+/* Pour les navigateurs modernes : tout titre/alerte qui contient une icône
+   devient un conteneur flex pour garantir l'alignement icône-texte sur une seule ligne. */
+h1:has(> svg.icon), h2:has(> svg.icon), h3:has(> svg.icon),
+h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
+.alert:has(> svg.icon) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.alert { padding: 1rem 1.5rem; border-radius: 6px; margin-bottom: 1.5rem; font-weight: bold; }
+.alert-error { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.alert-success { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; box-shadow: 0 2px 8px rgba(0,0,0,0.08); } /* Ombre pour les alertes */
+.alert-warning { background-color: #fef3c7; color: #854d0e; border: 1px solid #fde047; }
+
+/* Badge for pending status in navigation */
+.badge-pending { background-color: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; line-height: 1; }
+.nav-link-pending { display: flex; align-items: center; gap: 6px; }
+
+/* --- LOGIN & REGISTER WRAPPER --- */
+.login-wrapper {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-gradient-end) 100%);
+    padding: 2rem;
+    position: relative;
+}
+
+.login-box {
+    background: var(--color-text-light);
+    padding: 3rem;
+    border-radius: 15px; /* Bords plus arrondis */
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15); /* Ombre plus profonde */
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+    border: 1px solid var(--color-bg-gradient-end); /* Bordure subtile */
+    transition: all 0.3s ease; /* Transition pour les interactions futures */
+}
+
+.login-box h2 { color: var(--color-primary-dark); margin-bottom: 0.5rem; }
+.login-box p { margin-bottom: 1.5rem; }
+.login-box input { margin-bottom: 1rem; }
+
+.main-logo {
+    height: 110px;
+    width: 110px;
+    margin: 0 auto 0.8rem auto;
+    display: block;
+    object-fit: contain;
+    border-radius: 50%; /* sécurité : assure le rendu circulaire si le PNG a un fond */
+}
+
+/* Logo dans l'en-tête (à côté du nom du site) */
+.header-logo {
+    height: 36px;
+    width: 36px;
+    object-fit: contain;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Logo dans le pied de page */
+.footer-logo-img {
+    height: 40px;
+    width: 40px;
+    object-fit: contain;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.partner-logos-container { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; }
+.partner-logo { height: 50px; background: rgba(255,255,255,0.9); padding: 5px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+.link { color: var(--color-accent); font-weight: bold; }
+.link:hover { text-decoration: underline; }
+
+/* --- ACTIONS RAPIDES --- */
+.actions-grid { display: flex; flex-direction: column; gap: 1rem; }
+.btn-action {
+    display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem;
+    background-color: var(--color-input-bg); /* Fond gris très clair */
+    color: var(--color-primary-dark);
+    border: none; /* Pas de bordure */
+    border-radius: 12px; /* Coins bien arrondis */
+    font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease; text-align: left;
+    justify-content: flex-start; /* Force l'alignement à gauche des icônes */
+    box-shadow: none; /* Suppression de l'ombre */
+}
+.btn-action:hover { background-color: #e0f2f7; border-color: transparent; transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); } /* Lighter hover */
+
+/* Force la taille des icônes d'action rapide */
+.action-icon {
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
+    object-fit: contain;
+    flex-shrink: 0; /* Empêche l'icône de se réduire si le texte est long */
+}
+.btn-alert { color: #dc2626; } /* Texte rouge, fond reste blanc */
+.btn-alert:hover { background-color: #fef2f2; border-color: #fecaca; }
+.btn-icon { font-size: 1.5rem; }
+
+/* --- NOTIFICATIONS (Style Soft SaaS) --- */
+.notif-item {
+    background: var(--color-input-bg); /* Fond gris très clair */
+    border: none; /* Pas de bordure */
+    border-radius: 12px; /* Coins bien arrondis */
+    padding: 1rem 1.2rem; /* Plus d'espace interne */
+    margin-bottom: 0.8rem;
+    box-shadow: none; /* Pas d'ombre */
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    line-height: 1.4;
+    overflow-wrap: break-word; /* Empêche le texte de déborder */
+}
+.notif-item:hover { background-color: #e0f2f7; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transform: translateY(-1px); }
+.notif-item strong { color: #111827; font-size: 0.95rem; font-weight: 600; } /* Titre plus sombre */
+.notif-text { color: #4b5563; font-size: 0.85rem; } /* Texte descriptif plus clair */
+.notif-date { font-size: 0.7rem; color: #9ca3af; text-align: left; margin-top: 0.2rem; }
+.notif-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.notif-link { font-size: 0.85rem; color: var(--color-accent); font-weight: 600; }
+.notif-item:last-child, .notif-alert-maladie:last-child { margin-bottom: 0; } /* Correction du padding manquant */
+
+/* --- ALERTE MALADIE SPÉCIFIQUE (Notifications) --- */
+.notif-alert-maladie {
+    background-color: var(--color-red-soft-bg); /* bg-red-50 */
+    border: 1px solid #fca5a5; /* Bordure rouge très pâle */
+    border-radius: 12px; /* rounded-xl */
+    padding: 1rem 1.2rem; /* Plus d'espace interne */
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+    box-shadow: none;
+    overflow-wrap: break-word; /* Empêche le texte de déborder */
+}
+.notif-alert-maladie .alert-icon { width: 24px; height: 24px; flex-shrink: 0; color: var(--color-red-soft-text); } /* Icône rouge */
+.notif-alert-maladie .alert-content { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; min-width: 0; } /* min-width 0 force le break-word en flex */
+.notif-alert-maladie strong { color: var(--color-red-soft-text); }
+.notif-alert-maladie .notif-text { color: #ef4444; } /* Texte plus foncé */
+.notif-alert-maladie .notif-date { color: #f87171; }
+
+/* ==========================================================================
+   SECTION FONCTIONNALITÉS (GRID 4 COLONNES)
+   ========================================================================== */
+.features-section {
+    background-color: var(--color-bg-light);
+    padding: 5rem 5%;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.feature-card {
+    background: var(--color-text-light);
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+    border: 1px solid var(--color-bg-gradient-end);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.feature-card svg {
+    width: 40px;
+    height: 40px;
+    fill: var(--color-accent);
+    margin: 0 auto 1rem auto;
+    flex-shrink: 0;
+}
+
+.feature-card h3 {
+    font-size: 1.25rem;
+    color: var(--color-primary-dark);
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+/* ==========================================================================
+   SECTION PARCOURS UTILISATEUR (STEPS - 2 COLONNES)
+   ========================================================================== */
+.journey-section {
+    background-color: var(--color-primary-dark);
+    color: var(--color-text-light);
+    padding: 6rem 5%;
+}
+
+.journey-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: center;
+}
+
+.journey-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.step-item {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.step-number {
+    background-color: var(--color-accent);
+    color: var(--color-text-light);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step-content h3 {
+    margin-bottom: 0.5rem;
+}
+
+/* ==========================================================================
+   PIED DE PAGE (FOOTER)
+   ========================================================================== */
+.main-footer {
+    background-color: #081d16; /* Plus sombre que le primary dark */
+    color: var(--color-text-light);
+    text-align: center;
+    padding: 2rem 5%;
+    position: relative; /* Permet d'ancrer le bloc partenaire dans le coin */
+}
+
+/* --- LOGOS PARTENAIRES (BADGE EN COIN) --- */
+.footer-partners {
+    position: absolute;
+    bottom: 20px;
+    right: 30px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: var(--color-text-light); /* Le rectangle blanc/ivoire */
+    padding: 8px 15px;
+    border-radius: 12px; /* Contour arrondi */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Ombre douce pour le détacher du fond vert */
+    z-index: 10;
+}
+
+.partners-text {
+    font-size: 0.7rem;
+    color: var(--color-primary-dark);
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+    opacity: 0.8;
+    border-right: 1px solid #ccc; /* Petite ligne de séparation élégante */
+    padding-right: 10px;
+}
+
+.footer-partner-logo {
+    height: 25px; /* Logos tout petits et discrets */
+    width: auto;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.footer-partner-logo:hover {
+    transform: translateY(-3px);
+}
+
+/* Responsive : on le recentre en bas si l'écran est trop petit (smartphone) */
+@media (max-width: 768px) {
+    .footer-partners {
+        position: static;
+        justify-content: center;
+        margin: 2rem auto 0 auto;
+        width: max-content;
+    }
+}
+
+/* Styles for footer elements */
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+.footer-logo { justify-content: center; color: var(--color-text-light); }
+.footer-description { max-width: 600px; opacity: 0.8; }
+.footer-copyright { margin-top: 1rem; font-size: 0.9rem; opacity: 0.6; }
+
+/* Styles for meteo sync button */
+.btn-sync-meteo { background-color: var(--color-accent); display: flex; align-items: center; gap: 8px; }
+.btn-sync-meteo:hover { background-color: #a35a3d; }
+
+/* ==========================================================================
+   PLAN DES PARCELLES (DESIGN BILLET D'AVION / SIÈGES)
+   ========================================================================== */
+/* Conteneur principal (Grille compacte des secteurs) */
+.secteurs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    padding: 25px;
+    background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-gradient-end) 100%);
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+}
+
+/* Design d'un bloc Secteur géographique */
+.secteur-zone {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px dashed #cbd5e1;
+    min-height: 100px;
+}
+
+/* Le wrapper interactif */
+.siege-wrapper { position: relative; cursor: pointer; }
+
+.secteur-title {
+    text-align: center;
+    color: var(--color-primary-dark);
+    margin-bottom: 15px;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 5px;
+}
+
+/* Grille interne pour les sièges d'un même secteur */
+.plan-jardin {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 10px;
+}
+
+/* Le design de base d'un "siège" (Parcelle) */
+.siege-label {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    height: 75px;
+    border-radius: 20px 20px 6px 6px; /* Arrondi prononcé en haut (effet siège) */
+    font-weight: bold; color: var(--color-text-light);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: all 0.2s ease; text-align: center; line-height: 1.2;
+}
+
+.siege-label .numero { font-size: 1.2rem; }
+.siege-label .secteur { font-size: 0.7rem; opacity: 0.85; text-transform: uppercase; }
+
+/* --- ÉTAT : LIBRE --- */
+.siege-libre { background-color: #22c55e; cursor: pointer; border: 2px solid #16a34a; }
+.siege-libre:hover { background-color: #16a34a; transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+
+/* --- ÉTAT : SÉLECTIONNÉ (Géré dynamiquement via JavaScript) --- */
+.siege-wrapper.selected-siege .siege-label {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba(188, 108, 77, 0.4);
+    border-color: var(--color-accent);
+    z-index: 2;
+}
+.siege-wrapper.selected-siege .siege-libre {
+    background-color: var(--color-accent);
+}
+.siege-wrapper.selected-siege .siege-occupee {
+    border-color: #991b1b;
+}
+
+/* --- ÉTAT : OCCUPÉ --- */
+.siege-occupee {
+    background-color: #fee2e2; 
+    color: #991b1b; 
+    cursor: not-allowed; 
+    border: 2px solid #fca5a5;
+}
+
+.siege-occupee .secteur { opacity: 0.8; color: #991b1b; }
+
+/* ==========================================================================
+   BADGE DE STATUT UTILISATEUR (Sous l'en-tête)
+   ========================================================================== */
+.badge-wrapper {
+    position: absolute; /* Fait flotter le badge au-dessus de la page */
+    left: 0;
+    margin-top: 1.5rem;
+    pointer-events: none; /* Le clic traverse l'enveloppe invisible */
+    z-index: 10;
+}
+
+.user-status-badge {
+    pointer-events: auto; /* Mais reste actif sur le badge lui-même */
+    display: inline-flex;
+    flex-direction: column;
+    background: var(--color-text-light);
+    border: 1px solid var(--color-bg-gradient-end);
+    border-left: none; /* On retire la bordure gauche pour coller à l'écran */
+    border-right: 4px solid var(--color-accent); /* On met la ligne d'accent à droite */
+    padding: 0.6rem 1.2rem;
+    margin: 0;
+    border-radius: 0 8px 8px 0; /* Plat à gauche, arrondi à droite */
+    box-shadow: 4px 4px 10px rgba(0,0,0,0.05); /* L'ombre est décalée vers la droite */
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 10;
+    position: relative;
+}
+
+.user-status-badge:hover {
+    transform: translateX(5px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+}
+
+.status-text {
+    font-size: 0.7rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.status-name {
+    font-weight: bold;
+    color: var(--color-primary-dark);
+    font-size: 1.05rem;
+}
+
+.status-role {
+    display: inline-block;
+    margin-top: 5px;
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+    background-color: var(--color-primary-dark);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    width: max-content;
+}
+
+/* Alignement parfait : le titre de la page se décale pour faire place au badge sur la MÊME LIGNE */
+.logged-in .container .header {
+    min-height: 85px; /* Garantit que la ligne de séparation s'aligne proprement avec le bas du badge */
+}
+
+/* Sécurité : Si l'écran n'est pas géant, on pousse le titre pour éviter qu'il ne glisse sous le badge */
+@media (max-width: 1550px) {
+    .logged-in .container .header {
+        padding-left: 240px;
+    }
+}
+
+/* Responsive : sur téléphone, on les remet l'un au-dessus de l'autre proprement */
+@media (max-width: 850px) {
+    .badge-wrapper {
+        position: static;
+        margin-bottom: -1rem;
+    }
+    .logged-in .container .header {
+        padding-left: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}
+
+/* ==========================================================================
+   MODULE CULTURES (GRID & CARDS)
+   ========================================================================== */
+.cultures-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.card-culture {
+    background: #F9FAFB; /* Gris très clair, plat dans la carte blanche */
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.2rem;
+    box-shadow: none; /* Plus d'ombre au repos */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+.card-culture:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); /* Ombre douce au survol */
+}
+
+.culture-title { margin-top: 0; color: var(--color-primary-dark); border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; font-size: 1.1rem; }
+.card-culture p { margin-bottom: 0.3rem; font-size: 0.9rem; }
+
+.status-encours { /* Plus de bordure massive */ }
+.status-terminee {
+    opacity: 0.7;
+    background-color: #f3f4f6;
+}
+
+.culture-action-buttons { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; }
+
+/* Contribution form specific styles */
+.contribution-block { margin-top: 1rem; padding: 1rem; background: var(--color-bg-light); border-radius: 8px; border: 1px solid var(--color-bg-gradient-end); }
+.contribution-block h4 { margin-bottom: 1rem; color: var(--color-primary-dark); }
+.btn-add-item { background: transparent; color: var(--color-accent); border: 2px dashed var(--color-accent); padding: 0.5rem; width: 100%; }
+.btn-add-item:hover { background: var(--color-bg-light); }
+.btn-remove-item { padding: 0.5rem 1rem; width: auto; margin-bottom: 0; }
+
+/* ==========================================================================
+   CLASSES UTILITAIRES (REMPLACEMENT DU CSS INLINE)
+   ========================================================================== */
+.sticky-top { position: sticky; top: 100px; }
+.border-bottom-gradient { border-bottom: 1px solid var(--color-bg-gradient-end); padding-bottom: 0.5rem; }
+.hr-dashed { margin: 1.5rem 0; border: 0; border-top: 1px dashed var(--color-bg-gradient-end); }
+.label-block { font-weight: bold; display: block; margin-bottom: 0.5rem; }
+.bg-danger-light { background-color: #fee2e2; color: #991b1b; }
+.text-primary-lg { font-size: 1.1rem; color: var(--color-primary-dark); }
+.journey-title { font-size: 2.5rem; margin-bottom: 2rem; }
+.journey-visual-box { position: relative; background: linear-gradient(to top right, #0a2119, #134233); border-radius: 12px; height: 100%; min-height: 400px; display: flex; align-items: center; justify-content: center; }
+.toast-notification { position: absolute; bottom: -20px; right: -20px; background: var(--color-text-light); color: var(--color-primary-dark); padding: 1.5rem; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 250px; }
+.toast-title { display: block; font-size: 1.1rem; margin-bottom: 0.2rem; font-weight: bold; }
+.toast-text { font-size: 0.9rem; margin-bottom: 1rem; color: #555; }
+.progress-bg { width: 100%; background: #ddd; height: 6px; border-radius: 3px; overflow: hidden; }
+.progress-fill { width: 15%; background: var(--color-accent); height: 100%; }
+
+/* ==========================================================================
+   MODULE MÉTÉO (cartes de prévisions + journal historique)
+   ========================================================================== */
+.meteo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.meteo-card {
+    background: var(--color-card-bg);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.meteo-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+.meteo-card-today {
+    background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-gradient-end) 100%);
+    border-color: var(--color-accent);
+}
+
+.meteo-date {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9rem;
+    color: var(--color-text-soft-gray);
+    text-transform: capitalize;
+}
+.meteo-date strong { color: var(--color-primary-dark); font-size: 1rem; }
+
+.meteo-icon { font-size: 2.4rem; color: var(--color-accent); line-height: 1; }
+.meteo-temp { font-size: 1.6rem; font-weight: bold; color: var(--color-primary-dark); }
+.meteo-rain { font-size: 0.9rem; color: var(--color-text-soft-gray); display: flex; align-items: center; gap: 0.3rem; }
+.meteo-desc { font-size: 0.85rem; color: var(--color-text-soft-gray); }
+
+/* Tableaux : permettre le défilement horizontal sur petit écran */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ==========================================================================
+   RESPONSIVE DESIGN — Mobile First inversé (desktop-first)
+   3 paliers : tablette (≤ 992px), mobile (≤ 768px), petit mobile (≤ 480px)
+   ========================================================================== */
+
+/* --- TABLETTE (≤ 992px) ----------------------------------------------------- */
+@media (max-width: 992px) {
+
+    /* Conteneur principal : réduire le padding latéral */
+    .container { padding: 1rem; }
+
+    /* En-tête principal : barre de nav passe en colonne */
+    .main-header {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    .main-nav { width: 100%; }
+    .nav-menu {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem 1rem;
+    }
+    .header-actions { width: 100%; justify-content: center; }
+
+    /* Dashboard 2 colonnes → 1 colonne sur tablette */
+    .dashboard-grid,
+    .form-grid-half,
+    .journey-container { grid-template-columns: 1fr; }
+
+    /* Sections d'accueil */
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* --- MOBILE (≤ 768px) ------------------------------------------------------ */
+@media (max-width: 768px) {
+
+    body { font-size: 15px; }
+
+    /* Titres : réduire la taille pour rester lisibles */
+    h1 { font-size: 1.7rem; }
+    h2 { font-size: 1.4rem; }
+    h3 { font-size: 1.15rem; }
+
+    /* En-tête de page (titre + bouton d'action) : empilement vertical */
+    .container .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .container .header form,
+    .container .header .btn,
+    .container .header button { width: 100%; }
+
+    /* Accueil : grilles passent en 1 colonne */
+    .stats-grid,
+    .features-grid { grid-template-columns: 1fr; }
+
+    /* Hero : réduire les marges */
+    .hero-section {
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+    .hero-section h1 { font-size: 1.8rem; }
+    .hero-actions { flex-direction: column; }
+    .hero-actions .btn { width: 100%; }
+
+    /* Tableaux : forcer un scroll horizontal et réduire la police */
+    table { font-size: 0.85rem; }
+    table th, table td { padding: 0.5rem; }
+
+    /* Cartes plus compactes */
+    .card, .form-card { padding: 1rem; }
+
+    /* Météo : grille plus petite sur mobile */
+    .meteo-grid { grid-template-columns: repeat(2, 1fr); }
+
+    /* Logo plus compact */
+    .header-logo, .footer-logo-img { width: 32px; height: 32px; }
+
+    /* Footer : recentrage propre */
+    .footer-content { text-align: center; padding: 0 1rem; }
+}
+
+/* --- PETIT MOBILE (≤ 480px) ------------------------------------------------ */
+@media (max-width: 480px) {
+
+    body { font-size: 14px; }
+
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.2rem; }
+
+    .container { padding: 0.6rem; }
+    .card, .form-card { padding: 0.8rem; border-radius: 8px; }
+
+    /* Météo : 1 colonne sur petit écran */
+    .meteo-grid { grid-template-columns: 1fr; }
+
+    /* Cultures : 1 colonne */
+    .cultures-grid { grid-template-columns: 1fr; }
+
+    /* Parcelles : grille fluide */
+    .secteurs-grid { grid-template-columns: 1fr; gap: 1rem; padding: 12px; }
+
+    /* Boutons pleine largeur partout */
+    .btn, button[type="submit"] { width: 100%; }
+
+    /* Badge utilisateur : compacter */
+    .user-status-badge { font-size: 0.85rem; padding: 0.4rem 0.8rem; }
+    .status-text { display: none; } /* On masque "Connecté en tant que" sur très petit écran */
+
+    /* Navigation : empiler les items du menu */
+    .nav-menu { flex-direction: column; align-items: stretch; width: 100%; }
+    .nav-link { display: block; text-align: center; padding: 0.6rem; }
+
+    /* Formulaires : champs pleine largeur */
+    input, select, textarea { width: 100%; }
+}
+.icon-bell-custom { stroke: #c2410c; fill: #ffedd5; }
