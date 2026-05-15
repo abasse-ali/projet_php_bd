@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // NOTE TECHNIQUE : Si l'erreur persiste sur Render, enlevez les deux barres "//" 
         // de la ligne ci-dessous pour afficher l'erreur brute PostgreSQL à l'écran.
-        // die("Erreur SQL de debug : " . $e->getMessage());
+        die("Erreur SQL de debug : " . $e->getMessage());
 
         header("Location: index.php?page=inscription&msg=db_err");
         exit;
