@@ -1,43 +1,39 @@
 <?php
 // pages/public/inscription.php
 
-// Si l'utilisateur est déjà connecté, redirection immédiate vers la page d'accueil
+// Si l'utilisateur est déjà connecté, redirection immédiate
 if (isset($_SESSION['id_utilisateur'])) {
     header("Location: index.php?page=accueil");
     exit;
 }
 
-// --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
+// --- TRAITEMENT POST ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Récupération et nettoyage des données du formulaire
     $nom = trim($_POST['nom'] ?? '');
     $prenom = trim($_POST['prenom'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $mot_de_passe = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
-    // Validation 1 : Vérification des champs requis
+    // Validations de base
     if (empty($nom) || empty($prenom) || empty($email) || empty($mot_de_passe) || empty($confirm_password)) {
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=missing");
         exit;
     }
 
-    // Validation 2 : Format de l'adresse email
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=email_invalid");
         exit;
     }
 
-    // Validation 3 : Longueur minimale du mot de passe
     if (strlen($mot_de_passe) < 4) {
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=too_short");
         exit;
     }
 
-    // Validation 4 : Correspondance des deux mots de passe
     if ($mot_de_passe !== $confirm_password) {
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=mismatch");
@@ -45,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        // Validation 5 : Vérification de l'unicité de l'adresse email
+        // Vérification si l'email existe déjà
         $requeteCheck = $bdd->prepare("SELECT COUNT(*) FROM Utilisateur WHERE email = ?");
         $requeteCheck->execute([$email]);
         if ($requeteCheck->fetchColumn() > 0) {
@@ -54,39 +50,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Préparation des données d'insertion
+        // Hachage et rôle
         $password_hash = password_hash($mot_de_passe, PASSWORD_BCRYPT);
         $role_par_defaut = 'Visiteur';
 
-        // Début de la transaction
-        $bdd->beginTransaction();
-
-        // Insertion du nouvel utilisateur (Spécifique PostgreSQL avec RETURNING)
+        // 1. Insertion de l'utilisateur (AVEC RETURNING et SANS beginTransaction)
         $requeteInsert = $bdd->prepare("INSERT INTO Utilisateur (nomU, prenomU, email, mot_de_passe, roleU, date_inscription) VALUES (?, ?, ?, ?, ?, CURRENT_DATE) RETURNING id_utilisateur");
         $requeteInsert->execute([$nom, $prenom, $email, $password_hash, $role_par_defaut]);
         
-        // Récupération de l'ID généré
         $id_utilisateur = $requeteInsert->fetchColumn();
 
-        // Inscription sur la liste d'attente pour la première parcelle du jardin
+        // 2. Inscription sur la liste d'attente
         $id_parcelle = $bdd->query("SELECT id_parcelle FROM Parcelle ORDER BY id_parcelle LIMIT 1")->fetchColumn();
-        if ($id_parcelle) {
+        if ($id_parcelle && $id_utilisateur) {
             $requeteAttente = $bdd->prepare("INSERT INTO s_inscrire (id_utilisateur, id_parcelle, date_demande, priorite, motivation) VALUES (?, ?, CURRENT_DATE, 1, ?)");
             $requeteAttente->execute([$id_utilisateur, $id_parcelle, "Demande d'inscription au jardin partagé"]);
         }
 
-        // Validation de la transaction
-        $bdd->commit();
+        // Succès
         unset($_SESSION['register_old']);
-        
-        // Redirection avec message de succès
         header("Location: index.php?page=inscription&msg=ok");
         exit;
 
     } catch (PDOException $e) {
-        if ($bdd->inTransaction()) {
-            $bdd->rollBack();
-        }
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=db_err");
         exit;
@@ -96,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $titre = "Inscription - La Bòstia Verda";
 include 'inclusions/entete.php';
 
-// Cartographie et traduction des messages
+// Messages
 $erreur = null;
 $success = null;
 if (isset($_GET['msg'])) {
