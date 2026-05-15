@@ -54,42 +54,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Préparation des données d'insertion (hachage sécurisé et rôle par défaut)
+        // Préparation des données d'insertion
         $password_hash = password_hash($mot_de_passe, PASSWORD_BCRYPT);
         $role_par_defaut = 'Visiteur';
 
-        // --- MODE DEBUG : ON DÉSACTIVE LES TRANSACTIONS ---
-        // $bdd->beginTransaction();
+        // Début de la transaction
+        $bdd->beginTransaction();
 
-        // Insertion du nouvel utilisateur (RETURNING id_utilisateur)
+        // Insertion du nouvel utilisateur (Spécifique PostgreSQL avec RETURNING)
         $requeteInsert = $bdd->prepare("INSERT INTO Utilisateur (nomU, prenomU, email, mot_de_passe, roleU, date_inscription) VALUES (?, ?, ?, ?, ?, CURRENT_DATE) RETURNING id_utilisateur");
         $requeteInsert->execute([$nom, $prenom, $email, $password_hash, $role_par_defaut]);
         
+        // Récupération de l'ID généré
         $id_utilisateur = $requeteInsert->fetchColumn();
 
-        // Inscription sur la liste d'attente
+        // Inscription sur la liste d'attente pour la première parcelle du jardin
         $id_parcelle = $bdd->query("SELECT id_parcelle FROM Parcelle ORDER BY id_parcelle LIMIT 1")->fetchColumn();
         if ($id_parcelle) {
             $requeteAttente = $bdd->prepare("INSERT INTO s_inscrire (id_utilisateur, id_parcelle, date_demande, priorite, motivation) VALUES (?, ?, CURRENT_DATE, 1, ?)");
             $requeteAttente->execute([$id_utilisateur, $id_parcelle, "Demande d'inscription au jardin partagé"]);
         }
 
-        // $bdd->commit();
+        // Validation de la transaction
+        $bdd->commit();
         unset($_SESSION['register_old']);
         
-        // --- MODE DEBUG : ON ARRÊTE LE SCRIPT SI TOUT MARCHE ---
-        die("SUCCÈS ! L'utilisateur a été inséré avec l'ID : " . $id_utilisateur);
+        // Redirection avec message de succès
+        header("Location: index.php?page=inscription&msg=ok");
+        exit;
 
     } catch (PDOException $e) {
-        // --- MODE DEBUG : ON AFFICHE L'ERREUR EXACTE ---
-        die("VOICI LA VRAIE ERREUR SQL : " . $e->getMessage());
+        if ($bdd->inTransaction()) {
+            $bdd->rollBack();
+        }
+        $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
+        header("Location: index.php?page=inscription&msg=db_err");
+        exit;
     }
 }
 
 $titre = "Inscription - La Bòstia Verda";
 include 'inclusions/entete.php';
 
-// Cartographie et traduction des messages d'erreur ou de succès post-redirection
+// Cartographie et traduction des messages
 $erreur = null;
 $success = null;
 if (isset($_GET['msg'])) {
