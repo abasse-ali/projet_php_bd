@@ -68,10 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Début de la transaction pour lier la création de compte et l'inscription sur liste d'attente
         $bdd->beginTransaction();
 
-        // Insertion du nouvel utilisateur
-        $requeteInsert = $bdd->prepare("INSERT INTO Utilisateur (nomU, prenomU, email, mot_de_passe, roleU, date_inscription) VALUES (?, ?, ?, ?, ?, CURRENT_DATE)");
+        // Insertion du nouvel utilisateur - AJOUT DE LA CLAUSE RETURNING POUR POSTGRESQL
+        $requeteInsert = $bdd->prepare("INSERT INTO Utilisateur (nomU, prenomU, email, mot_de_passe, roleU, date_inscription) VALUES (?, ?, ?, ?, ?, CURRENT_DATE) RETURNING id_utilisateur");
         $requeteInsert->execute([$nom, $prenom, $email, $password_hash, $role_par_defaut]);
-        $id_utilisateur = $bdd->lastInsertId();
+        
+        // RÉCUPÉRATION DE L'ID AVEC fetchColumn() AU LIEU DE lastInsertId()
+        $id_utilisateur = $requeteInsert->fetchColumn();
 
         // Inscription sur la liste d'attente pour la première parcelle disponible (si la table Parcelle existe)
         $id_parcelle = $bdd->query("SELECT id_parcelle FROM Parcelle ORDER BY id_parcelle LIMIT 1")->fetchColumn();
@@ -89,6 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Annulation des modifications en cas d'échec SQL
         if ($bdd->inTransaction()) $bdd->rollBack();
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
+        
+        // NOTE TECHNIQUE : Si l'erreur persiste sur Render, enlevez les deux barres "//" 
+        // de la ligne ci-dessous pour afficher l'erreur brute PostgreSQL à l'écran.
+        // die("Erreur SQL de debug : " . $e->getMessage());
+
         header("Location: index.php?page=inscription&msg=db_err");
         exit;
     }
