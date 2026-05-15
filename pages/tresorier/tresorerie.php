@@ -1,26 +1,46 @@
 <?php
-// pages/tresorier/tresorerie.php
+/**
+ * pages/tresorier/tresorerie.php
+ *
+ * Page de gestion de la trésorerie et des contributions.
+ * Permet au Trésorier de visualiser l'historique des contributions,
+ * de valider les apports en attente et de promouvoir automatiquement
+ * les Visiteurs en Adhérents lors de la validation de leur contribution.
+ */
+
+// Sécurisation de l'accès à la page
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
+
+// Vérification des droits : réservé au rôle 'Trésorier'
 exiger_role('Trésorier');
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
+/**
+ * Traitement de la validation d'une contribution.
+ * Applique le pattern PRG (Post-Redirect-Get) pour éviter les doubles soumissions de formulaire.
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_contribution'], $_POST['id_utilisateur'])) {
     $id_contrib = (int) $_POST['id_contribution'];
     $id_user    = (int) $_POST['id_utilisateur'];
+    
     try {
+        // Démarrage de la transaction pour garantir la cohérence des deux requêtes
         $bdd->beginTransaction();
-        // 1. On passe la contribution en 'validée'
+        
+        // 1. On passe la contribution concernée du statut 'en attente' à 'validée'
         $bdd->prepare("UPDATE Contribution SET statutC = 'validée' WHERE id_contribution = ? AND statutC = 'en attente'")
             ->execute([$id_contrib]);
 
-        // 2. Logique métier : si l'apporteur était Visiteur, il est promu Adhérent
+        // 2. Logique métier : si l'apporteur était un 'Visiteur', il est automatiquement promu 'Adhérent'
         $bdd->prepare("UPDATE Utilisateur SET roleU = 'Adhérent' WHERE id_utilisateur = ? AND roleU = 'Visiteur'")
             ->execute([$id_user]);
 
+        // Validation de la transaction
         $bdd->commit();
         header("Location: index.php?page=tresorerie&msg=ok");
         exit;
     } catch (PDOException $e) {
+        // Annulation des modifications en cas d'erreur
         $bdd->rollBack();
         header("Location: index.php?page=tresorerie&msg=db_err");
         exit;
@@ -30,19 +50,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_contribution'], $_
 $titre = "Trésorerie";
 include 'inclusions/entete.php';
 
+/**
+ * Gestion et affichage des messages d'état post-redirection
+ */
 $msg = "";
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
-        case 'ok':     $msg = "<div class='alert alert-success'>" . icon('check') . " Contribution validée. Si le membre était Visiteur, il est désormais Adhérent.</div>"; break;
-        case 'db_err': $msg = "<div class='alert alert-error'>" . icon('warning') . " Erreur lors de la validation.</div>"; break;
+        case 'ok':     
+            $msg = "<div class='alert alert-success'>" . icon('check') . " Contribution validée. Si le membre était Visiteur, il est désormais Adhérent.</div>"; 
+            break;
+        case 'db_err': 
+            $msg = "<div class='alert alert-error'>" . icon('warning') . " Erreur lors de la validation.</div>"; 
+            break;
     }
 }
 
+/**
+ * @var int $nb_total      Nombre total de contributions enregistrées.
+ * @var int $nb_en_attente Nombre de contributions nécessitant l'action du trésorier.
+ * @var int $nb_validees   Nombre de contributions validées avec succès.
+ */
 // --- KPI : statistiques de trésorerie ---
 $nb_total      = $bdd->query("SELECT COUNT(*) FROM Contribution")->fetchColumn();
 $nb_en_attente = $bdd->query("SELECT COUNT(*) FROM Contribution WHERE statutC = 'en attente'")->fetchColumn();
 $nb_validees   = $bdd->query("SELECT COUNT(*) FROM Contribution WHERE statutC = 'validée'")->fetchColumn();
 
+/**
+ * @var array $contributions Liste complète des contributions avec les informations du membre associé.
+ * Tri : les contributions 'en attente' apparaissent en premier, puis tri par date décroissante.
+ */
 // --- Historique des contributions ---
 $contributions = $bdd->query("
     SELECT c.*, u.prenomU, u.nomU, u.id_utilisateur, u.roleU

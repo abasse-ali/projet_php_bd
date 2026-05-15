@@ -1,24 +1,46 @@
 <?php
-// pages/tresorier/outils.php
+/**
+ * pages/tresorier/outils.php
+ *
+ * Page de gestion des stocks d'outils du jardin partagé.
+ * Permet au Trésorier d'ajouter de nouveaux outils au cabanon,
+ * et de modifier leur état physique (Opérationnel, Abîmé, HS).
+ * La disponibilité est calculée automatiquement selon l'état et les réservations.
+ */
+
+// Sécurisation de l'accès à la page
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
+
+// Vérification des droits : réservé au rôle 'Trésorier'
 exiger_role('Trésorier');
 
-// États possibles pour un outil (cohérent avec la contrainte CHECK BDD)
-$ETATS_VALIDES = ['Opérationnel', 'Abîmé', 'En réparation', 'HS'];
+/**
+ * @var array $ETATS_VALIDES 
+ * Liste des états possibles pour un outil. 
+ * Doit être strictement identique à la contrainte CHECK de la base de données.
+ */
+$ETATS_VALIDES = ['Opérationnel', 'Abîmé', 'HS'];
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
+/**
+ * Routage des actions de formulaire (Ajout d'outil ou Mise à jour d'état).
+ * Utilisation du pattern PRG (Post-Redirect-Get).
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
+    // Action : Ajout d'un nouvel outil
     if ($_POST['action'] === 'add') {
         $nomO = trim($_POST['nomO'] ?? '');
         $etat = $_POST['etat_physique'] ?? '';
 
+        // Validation des données d'entrée
         if (empty($nomO) || !in_array($etat, $ETATS_VALIDES, true)) {
             header("Location: index.php?page=stocks_outils&msg=invalid");
             exit;
         }
 
         try {
+            // Insertion en base. Un outil nouvellement ajouté est considéré comme disponible par défaut.
             $requete = $bdd->prepare("INSERT INTO Outil (nomO, etat_physique, disponibiliteO) VALUES (?, ?, TRUE)");
             $requete->execute([$nomO, $etat]);
             header("Location: index.php?page=stocks_outils&msg=add_ok");
@@ -28,16 +50,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
+    // Action : Mise à jour de l'état d'un outil existant
     } elseif ($_POST['action'] === 'update_etat') {
         $id_outil    = (int) ($_POST['id_outil'] ?? 0);
         $nouvel_etat = $_POST['nouvel_etat'] ?? '';
 
+        // Validation des données
         if ($id_outil <= 0 || !in_array($nouvel_etat, $ETATS_VALIDES, true)) {
             header("Location: index.php?page=stocks_outils&msg=invalid");
             exit;
         }
 
-        // Si l'outil n'est plus opérationnel, on coupe la disponibilité automatiquement.
+        // Règle de gestion : Si l'outil n'est plus opérationnel (ex: cassé), 
+        // on révoque automatiquement sa disponibilité à l'emprunt.
         $dispo = ($nouvel_etat === 'Opérationnel');
 
         try {
@@ -55,19 +80,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $titre = "Gestion des Outils";
 include 'inclusions/entete.php';
 
+/**
+ * Gestion et affichage des messages de retour post-redirection
+ */
 $msg = "";
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
-        case 'add_ok':    $msg = "<div class='alert alert-success'>" . icon('check') . " Nouvel outil ajouté au cabanon.</div>"; break;
-        case 'update_ok': $msg = "<div class='alert alert-success'>" . icon('check') . " État de l'outil mis à jour.</div>"; break;
-        case 'invalid':   $msg = "<div class='alert alert-error'>" . icon('warning') . " Données invalides (nom manquant ou état non reconnu).</div>"; break;
-        case 'db_err':    $msg = "<div class='alert alert-error'>" . icon('warning') . " Erreur BDD.</div>"; break;
+        case 'add_ok':    
+            $msg = "<div class='alert alert-success'>" . icon('check') . " Nouvel outil ajouté au cabanon.</div>"; 
+            break;
+        case 'update_ok': 
+            $msg = "<div class='alert alert-success'>" . icon('check') . " État de l'outil mis à jour.</div>"; 
+            break;
+        case 'invalid':   
+            $msg = "<div class='alert alert-error'>" . icon('warning') . " Données invalides (nom manquant ou état non reconnu).</div>"; 
+            break;
+        case 'db_err':    
+            $msg = "<div class='alert alert-error'>" . icon('warning') . " Erreur BDD.</div>"; 
+            break;
     }
 }
 
+/**
+ * @var array $outils Liste complète des outils enregistrés, triée alphabétiquement.
+ */
 $outils = $bdd->query("SELECT * FROM Outil ORDER BY nomO")->fetchAll();
 
-// Réservations actives qui chevauchent aujourd'hui (donc outils actuellement empruntés)
+/**
+ * @var array $reservations_en_cours 
+ * Tableau associatif [id_outil => donnees_reservation].
+ * Permet d'identifier rapidement les outils qui sont empruntés à l'instant T (aujourd'hui).
+ */
 $reservations_en_cours = [];
 $requete_res = $bdd->query("
     SELECT r.id_outil_concerner, r.dateD, r.dateF, u.prenomU
@@ -112,8 +155,10 @@ foreach ($requete_res->fetchAll(PDO::FETCH_ASSOC) as $res) {
                             <tr><td colspan="4" class="text-center text-muted">Aucun outil enregistré.</td></tr>
                         <?php else: ?>
                             <?php foreach($outils as $o):
+                                // Détermination de l'état contextuel de l'outil
                                 $reservation_actuelle = $reservations_en_cours[$o['id_outil']] ?? null;
                                 $est_operationnel = ($o['etat_physique'] === 'Opérationnel');
+                                // Un outil est considéré comme 'emprunté' s'il est réservé ET opérationnel
                                 $est_emprunte = $reservation_actuelle && $est_operationnel;
                             ?>
                                 <tr>
@@ -164,6 +209,7 @@ foreach ($requete_res->fetchAll(PDO::FETCH_ASSOC) as $res) {
                 <h3 style="color: var(--color-primary-dark); margin-bottom: 1rem;">Ajouter un outil</h3>
                 <form method="POST" action="index.php?page=stocks_outils">
                     <input type="hidden" name="action" value="add">
+                    
                     <label for="nomO">Nom de l'outil :</label>
                     <input type="text" name="nomO" id="nomO" required maxlength="80">
 

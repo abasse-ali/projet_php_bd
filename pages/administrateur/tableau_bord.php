@@ -1,5 +1,14 @@
 <?php
-// pages/admin/dashboard.php
+/**
+ * pages/administrateur/tableau_bord.php
+ *
+ * Tableau de bord d'administration globale.
+ * Permet aux Administrateurs de superviser l'ensemble de la plateforme :
+ * 1. Taux d'occupation foncière et répartition des comptes par rôle.
+ * 2. Alertes automatiques sur l'état critique des stocks de la grainothèque.
+ */
+
+// Sécurisation stricte de l'accès à l'espace d'administration
 if (!isset($_SESSION['id_utilisateur']) || ($_SESSION['roleU'] ?? '') !== 'Administrateur') {
     die("Accès interdit : Réservé aux Administrateurs.");
 }
@@ -7,14 +16,26 @@ if (!isset($_SESSION['id_utilisateur']) || ($_SESSION['roleU'] ?? '') !== 'Admin
 $titre = "Supervision Globale - Admin";
 include 'inclusions/entete.php';
 
-// 1. Statistiques d'occupation
+/**
+ * @var array $stats_users Nombre de comptes utilisateurs regroupés par rôle applicatif.
+ */
 $stats_users = $bdd->query("SELECT roleU, COUNT(*) as total FROM Utilisateur GROUP BY roleU ORDER BY total DESC")->fetchAll();
+
+/**
+ * @var int $total_parcelles Nombre total de parcelles configurées sur le terrain.
+ */
 $total_parcelles = $bdd->query("SELECT COUNT(*) FROM Parcelle")->fetchColumn();
+
+/**
+ * @var int $parcelles_occupees Nombre de parcelles ayant une attribution active (non clôturée).
+ */
 $parcelles_occupees = $bdd->query("SELECT COUNT(*) FROM Attribution WHERE date_fin IS NULL OR date_fin > CURRENT_DATE")->fetchColumn();
 
-// 2. État de la grainothèque (alerte sur stock <= 15)
+/**
+ * @var array $alertes_stock Liste des semences dont la quantité en stock atteint ou descend sous le seuil critique (15g).
+ */
 $alertes_stock = $bdd->query("
-    SELECT s.nomS, s.stock_mis_a_jour, p.nom_variete 
+    SELECT s.nomS, s.stock_mis_a_jour, p.nom_variete
     FROM Semence s
     JOIN Plante p ON s.id_plante_correspondre = p.id_plante
     WHERE s.stock_mis_a_jour <= 15
@@ -40,13 +61,16 @@ $alertes_stock = $bdd->query("
                 Taux d'occupation
             </h3>
             <p class="mb-2"><strong>Parcelles :</strong> <?= $parcelles_occupees ?> / <?= $total_parcelles ?> attribuées.</p>
-            
+
             <table class="mt-2">
                 <thead>
-                    <tr><th>Rôle Utilisateur</th><th>Nombre de comptes</th></tr>
+                    <tr>
+                        <th>Rôle Utilisateur</th>
+                        <th>Nombre de comptes</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($stats_users as $stat): ?>
+                    <?php foreach ($stats_users as $stat): ?>
                         <tr>
                             <td><?= htmlspecialchars($stat['roleu']) ?></td>
                             <td><strong><?= $stat['total'] ?></strong></td>
@@ -55,18 +79,18 @@ $alertes_stock = $bdd->query("
                 </tbody>
             </table>
         </div>
-        
+
         <div class="card <?= !empty($alertes_stock) ? 'alert-error' : 'alert-success' ?>" style="margin-bottom:0;">
             <h3 class="flex-title mb-1" style="color:inherit;">
                 <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                 État de la Grainothèque
             </h3>
-            <?php if(empty($alertes_stock)): ?>
+            <?php if (empty($alertes_stock)): ?>
                 <p>Tous les stocks de semences sont suffisants.</p>
             <?php else: ?>
                 <p><strong>Attention :</strong> Stocks critiques !</p>
                 <ul style="margin-top: 10px; padding-left: 20px;">
-                    <?php foreach($alertes_stock as $alerte): ?>
+                    <?php foreach ($alertes_stock as $alerte): ?>
                         <li><?= htmlspecialchars($alerte['nom_variete']) ?> : <strong><?= $alerte['stock_mis_a_jour'] ?>g</strong> restants.</li>
                     <?php endforeach; ?>
                 </ul>

@@ -909,9 +909,9 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
 
 /* --- ÉTAT : OCCUPÉ --- */
 .siege-occupee {
-    background-color: #fee2e2; 
-    color: #991b1b; 
-    cursor: not-allowed; 
+    background-color: #fee2e2;
+    color: #991b1b;
+    cursor: not-allowed;
     border: 2px solid #fca5a5;
 }
 
@@ -1032,7 +1032,6 @@ h4:has(> svg.icon), h5:has(> svg.icon), h6:has(> svg.icon),
 .culture-title { margin-top: 0; color: var(--color-primary-dark); border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; font-size: 1.1rem; }
 .card-culture p { margin-bottom: 0.3rem; font-size: 0.9rem; }
 
-.status-encours { /* Plus de bordure massive */ }
 .status-terminee {
     opacity: 0.7;
     background-color: #f3f4f6;

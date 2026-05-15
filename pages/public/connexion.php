@@ -1,9 +1,16 @@
 <?php
-// pages/public/login.php
+/**
+ * pages/public/connexion.php
+ *
+ * Page de connexion de l'application.
+ * Permet l'authentification sécurisée des utilisateurs via leur email et mot de passe,
+ * l'initialisation de leur session globale et une redirection dynamique vers l'espace
+ * dédié correspondant à leur rôle.
+ */
 
 $titre = "Connexion - La Bòstia Verda";
 
-// Si on est déjà connecté, on va au jardin
+// Si l'utilisateur est déjà connecté, redirection immédiate vers l'accueil
 if (isset($_SESSION['id_utilisateur'])) {
     header("Location: index.php?page=accueil");
     exit;
@@ -11,7 +18,7 @@ if (isset($_SESSION['id_utilisateur'])) {
 
 $erreur = null;
 
-// Traitement de la soumission du formulaire
+// Traitement de la soumission du formulaire d'authentification
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email']);
     $mot_de_passe = $_POST['password'];
@@ -19,21 +26,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($mot_de_passe)) {
         $erreur = "Veuillez remplir tous les champs.";
     } else {
-        // On cherche l'utilisateur
+        // Recherche de l'utilisateur correspondant à l'email fourni
         $requete = $bdd->prepare("SELECT * FROM Utilisateur WHERE email = ?");
         $requete->execute([$email]);
         $utilisateur = $requete->fetch();
 
-        // Vérification du mot de passe
-        // On utilise password_verify pour comparer le mot de passe fourni avec le hachage en BDD
+        // Comparaison et vérification du mot de passe en clair avec le hachage stocké en BDD
         if ($utilisateur && password_verify($mot_de_passe, $utilisateur['mot_de_passe'])) {
-            // Connexion réussie : On remplit la session
+            // Initialisation des variables de session en cas de succès
             $_SESSION['id_utilisateur'] = $utilisateur['id_utilisateur'];
-            $_SESSION['nom']     = $utilisateur['prenomu']; // Prénom pour le header
-            $_SESSION['roleU']   = $utilisateur['roleu'];   // Clé unifiée utilisée par toute l'app
-            $_SESSION['role']    = $utilisateur['roleu'];   // Alias historique (conservé pour rétro-compat)
+            $_SESSION['nom']     = $utilisateur['prenomu']; // Prénom utilisé pour l'en-tête
+            $_SESSION['roleU']   = $utilisateur['roleu'];   // Clé unifiée pour le contrôle d'accès
+            $_SESSION['role']    = $utilisateur['roleu'];   // Alias historique pour rétro-compatibilité
 
-            // Redirection selon le rôle
+            // Redirection conditionnelle et dynamique selon le rôle de l'utilisateur
             switch ($utilisateur['roleu']) {
                 case 'Visiteur':
                     header("Location: index.php?page=cultures"); // Le visiteur va sur son dossier d'attente
@@ -42,11 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header("Location: index.php?page=admin_tableau_bord");
                     break;
                 case 'Responsable':
-                    header("Location: index.php?page=tableau_bord"); // A adapter plus tard
+                    header("Location: index.php?page=tableau_bord");
                     break;
                 case 'Tuteur':
                 case 'Trésorier':
-                    header("Location: index.php?page=accueil"); // En attendant leurs pages spécifiques
+                    header("Location: index.php?page=accueil"); // Redirection transitoire en attendant leurs pages spécifiques
                     break;
                 case 'Adhérent':
                 default:
@@ -63,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php include 'inclusions/entete.php'; ?>
 
 <div class="login-wrapper">
-
     <div class="login-box">
         <img src="ressources/images/logo.png" alt="Logo La Bòstia Verda" class="main-logo">
 

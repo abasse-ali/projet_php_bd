@@ -1,7 +1,14 @@
 <?php
-// pages/public/register.php
+/**
+ * pages/public/inscription.php
+ *
+ * Script de gestion de l'inscription des utilisateurs.
+ * Traite les données du formulaire, applique les validations nécessaires,
+ * chiffre le mot de passe, enregistre le nouvel utilisateur en tant que 'Visiteur'
+ * et l'ajoute automatiquement sur la liste d'attente du foncier (table `s_inscrire`).
+ */
 
-// Si déjà connecté → on redirige
+// Si l'utilisateur est déjà connecté, redirection immédiate vers la page d'accueil
 if (isset($_SESSION['id_utilisateur'])) {
     header("Location: index.php?page=accueil");
     exit;
@@ -9,30 +16,35 @@ if (isset($_SESSION['id_utilisateur'])) {
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nom              = trim($_POST['nom'] ?? '');
-    $prenom           = trim($_POST['prenom'] ?? '');
-    $email            = trim($_POST['email'] ?? '');
-    $mot_de_passe         = $_POST['password'] ?? '';
+    // Récupération et nettoyage des données du formulaire
+    $nom = trim($_POST['nom'] ?? '');
+    $prenom = trim($_POST['prenom'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $mot_de_passe = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
+    // Validation 1 : Vérification des champs requis
     if (empty($nom) || empty($prenom) || empty($email) || empty($mot_de_passe) || empty($confirm_password)) {
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=missing");
         exit;
     }
 
+    // Validation 2 : Format de l'adresse email
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=email_invalid");
         exit;
     }
 
+    // Validation 3 : Longueur minimale du mot de passe
     if (strlen($mot_de_passe) < 4) {
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=too_short");
         exit;
     }
 
+    // Validation 4 : Correspondance des deux mots de passe
     if ($mot_de_passe !== $confirm_password) {
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=mismatch");
@@ -40,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
+        // Validation 5 : Vérification de l'unicité de l'adresse email
         $requeteCheck = $bdd->prepare("SELECT COUNT(*) FROM Utilisateur WHERE email = ?");
         $requeteCheck->execute([$email]);
         if ($requeteCheck->fetchColumn() > 0) {
@@ -48,11 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        // Préparation des données d'insertion (hachage sécurisé et rôle par défaut)
         $password_hash = password_hash($mot_de_passe, PASSWORD_BCRYPT);
         $role_par_defaut = 'Visiteur';
 
+        // Début de la transaction pour lier la création de compte et l'inscription sur liste d'attente
         $bdd->beginTransaction();
 
+        // Insertion du nouvel utilisateur
         $requeteInsert = $bdd->prepare("INSERT INTO Utilisateur (nomU, prenomU, email, mot_de_passe, roleU, date_inscription) VALUES (?, ?, ?, ?, ?, CURRENT_DATE)");
         $requeteInsert->execute([$nom, $prenom, $email, $password_hash, $role_par_defaut]);
         $id_utilisateur = $bdd->lastInsertId();
@@ -64,11 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $requeteAttente->execute([$id_utilisateur, $id_parcelle, "Demande d'inscription au jardin partagé"]);
         }
 
+        // Validation de l'ensemble des opérations
         $bdd->commit();
         unset($_SESSION['register_old']);
         header("Location: index.php?page=inscription&msg=ok");
         exit;
     } catch (PDOException $e) {
+        // Annulation des modifications en cas d'échec SQL
         if ($bdd->inTransaction()) $bdd->rollBack();
         $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
         header("Location: index.php?page=inscription&msg=db_err");
@@ -79,21 +97,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $titre = "Inscription - La Bòstia Verda";
 include 'inclusions/entete.php';
 
+// Cartographie et traduction des messages d'erreur ou de succès post-redirection
 $erreur = null;
 $success = null;
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
-        case 'ok':            $success = "Compte créé avec succès ! Vous êtes sur la liste d'attente pour une parcelle."; break;
-        case 'missing':       $erreur = "Veuillez remplir tous les champs."; break;
-        case 'email_invalid': $erreur = "L'adresse email n'est pas valide."; break;
-        case 'too_short':     $erreur = "Le mot de passe doit contenir au moins 4 caractères."; break;
-        case 'mismatch':      $erreur = "Les mots de passe ne correspondent pas."; break;
-        case 'email_taken':   $erreur = "Cet email est déjà utilisé. Veuillez vous connecter."; break;
-        case 'db_err':        $erreur = "Une erreur est survenue lors de l'inscription. Réessayez."; break;
+        case 'ok': 
+            $success = "Compte créé avec succès ! Vous êtes sur la liste d'attente pour une parcelle."; 
+            break;
+        case 'missing':
+            $erreur = "Veuillez remplir tous les champs.";
+            break;
+        case 'email_invalid':
+            $erreur = "L'adresse email n'est pas valide.";
+            break;
+        case 'too_short':
+            $erreur = "Le mot de passe doit contenir au moins 4 caractères.";
+            break;
+        case 'mismatch':
+            $erreur = "Les mots de passe ne correspondent pas.";
+            break;
+        case 'email_taken':
+            $erreur = "Cet email est déjà utilisé. Veuillez vous connecter.";
+            break;
+        case 'db_err':
+            $erreur = "Une erreur est survenue lors de l'inscription. Réessayez.";
+            break;
     }
 }
 
-// Récupération des anciennes valeurs (pour pré-remplir le formulaire après une erreur)
+/**
+ * @var array $old Récupération des anciennes valeurs pour pré-remplir le formulaire en cas d'erreur de saisie.
+ */
 $old = $_SESSION['register_old'] ?? ['nom' => '', 'prenom' => '', 'email' => ''];
 ?>
 

@@ -1,16 +1,33 @@
 <?php
-// pages/responsable/dashboard.php
+/**
+ * pages/responsable/dashboard.php
+ *
+ * Tableau de bord pour le rôle "Responsable".
+ * Affiche les statistiques clés concernant la gestion du foncier,
+ * notamment l'occupation des parcelles et la file d'attente des inscriptions.
+ */
+
+// Sécurisation de l'accès à la page et vérification des droits
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
 exiger_role('Responsable');
 
 $titre = "Dashboard Foncier";
 include 'inclusions/entete.php';
 
+/**
+ * @var int $nb_utilisateurs Nombre total de membres inscrits sur la plateforme.
+ * @var int $nb_parcelles    Nombre total de parcelles physiques existantes.
+ * @var int $nb_affectations Nombre de parcelles actuellement attribuées (date_fin nulle ou future).
+ */
+// Récupération des indicateurs clés (KPIs) globaux
 $nb_utilisateurs = $bdd->query("SELECT COUNT(*) FROM Utilisateur")->fetchColumn();
-$nb_parcelles = $bdd->query("SELECT COUNT(*) FROM Parcelle")->fetchColumn();
+$nb_parcelles    = $bdd->query("SELECT COUNT(*) FROM Parcelle")->fetchColumn();
 $nb_affectations = $bdd->query("SELECT COUNT(*) FROM Attribution WHERE date_fin IS NULL OR date_fin > CURRENT_DATE")->fetchColumn();
 
-// Candidats en attente
+/**
+ * @var int $attentes Nombre de candidats actuellement inscrits en liste d'attente.
+ */
+// Récupération des demandes de parcelles en attente
 $attentes = $bdd->query("SELECT COUNT(*) FROM s_inscrire")->fetchColumn();
 ?>
 
@@ -37,7 +54,7 @@ $attentes = $bdd->query("SELECT COUNT(*) FROM s_inscrire")->fetchColumn();
                 <li><strong>Parcelles attribuées actives :</strong> <?= $nb_affectations ?> / <?= $nb_parcelles ?></li>
             </ul>
         </div>
-        
+
         <div class="card alert-warning" style="margin-bottom:0;">
             <h3 class="flex-title mb-1" style="color:inherit;">
                 <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
@@ -48,4 +65,5 @@ $attentes = $bdd->query("SELECT COUNT(*) FROM s_inscrire")->fetchColumn();
         </div>
     </div>
 </div>
+
 <?php include 'inclusions/pied_de_page.php'; ?>

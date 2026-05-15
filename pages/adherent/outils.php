@@ -1,8 +1,21 @@
 <?php
-// pages/adherent/outils.php
+/**
+ * pages/adherent/outils.php
+ *
+ * Page de gestion et de réservation des outils partagés pour les Adhérents.
+ * Permet aux membres :
+ * 1. De soumettre une nouvelle demande de réservation d'outil (soumise à validation).
+ * 2. D'annuler leurs propres réservations futures encore actives.
+ * 3. De consulter l'état d'occupation général des outils via un planning collectif.
+ */
+
+// Sécurisation de l'accès à la page
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
 exiger_role('Adhérent');
 
+/**
+ * @var int $id_utilisateur Identifiant de l'adhérent connecté.
+ */
 $id_utilisateur = $_SESSION['id_utilisateur'];
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
@@ -12,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'annuler') {
         $id_resa = $_POST['id_reservation'] ?? 0;
         try {
-            // On ne peut annuler QUE ses propres réservations qui ne sont pas déjà terminées ou annulées.
+            // Règle de sécurité : On ne peut annuler QUE ses propres réservations qui ne sont ni terminées ni déjà annulées.
             $requete = $bdd->prepare("
                 UPDATE Reservation
                 SET statutR = 'annulée'
@@ -21,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   AND statutR IN ('en attente', 'confirmée')
             ");
             $requete->execute([$id_resa, $id_utilisateur]);
+            
             if ($requete->rowCount() > 0) {
                 header("Location: index.php?page=outils&msg=cancel_ok");
                 exit;
@@ -39,23 +53,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $debut    = $_POST['debut'] ?? '';
     $fin      = $_POST['fin'] ?? '';
 
+    // Validation 1 : Présence des champs obligatoires
     if (empty($outil_id) || empty($debut) || empty($fin)) {
         header("Location: index.php?page=outils&msg=missing");
         exit;
     }
 
+    // Validation 2 : Cohérence chronologique interne
     if ($fin < $debut) {
         header("Location: index.php?page=outils&msg=date_err");
         exit;
     }
 
+    // Validation 3 : Interdiction de réserver à une date antérieure au jour courant
     if ($debut < date('Y-m-d')) {
         header("Location: index.php?page=outils&msg=past_err");
         exit;
     }
 
     try {
-        // Vérification de chevauchement : on ignore les réservations 'annulée' et 'terminée'.
+        // Validation 4 : Analyse de chevauchement d'agenda pour cet outil spécifique.
+        // Les créneaux annulés ou terminés sont ignorés pour libérer le matériel.
         $requeteCheck = $bdd->prepare("
             SELECT COUNT(*) FROM Reservation
             WHERE id_outil_concerner = ?
@@ -69,16 +87,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Vérification que l'outil est bien marqué disponible
+        // Validation 5 : Vérification de l'état de disponibilité physique global de l'outil
         $requeteDispo = $bdd->prepare("SELECT disponibiliteO FROM Outil WHERE id_outil = ?");
         $requeteDispo->execute([$outil_id]);
         $dispo = $requeteDispo->fetchColumn();
+        
+        // Prise en compte des différentes interprétations du booléen selon le driver de la BDD
         if ($dispo === false || $dispo === 'f' || $dispo === 0 || $dispo === '0') {
             header("Location: index.php?page=outils&msg=unavailable");
             exit;
         }
 
-        // Création en statut 'en attente' : un Administrateur devra confirmer la réservation.
+        // Insertion de la demande. Statut initialisé à 'en attente' (requiert approbation de l'admin)
         $bdd->prepare("
             INSERT INTO Reservation (id_outil_concerner, id_utilisateur_effectuer, dateD, dateF, statutR)
             VALUES (?, ?, ?, ?, 'en attente')
@@ -95,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $titre = "Réservation d'outils";
 include 'inclusions/entete.php';
 
-// Message à afficher après redirection
+// Cartographie et traduction des messages d'état post-redirection
 $msg = "";
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
@@ -111,9 +131,14 @@ if (isset($_GET['msg'])) {
     }
 }
 
+/**
+ * @var array $outils Liste complète du matériel disponible pour alimentation du select.
+ */
 $outils = $bdd->query("SELECT * FROM Outil ORDER BY nomO")->fetchAll();
 
-// Planning global des réservations à venir (toutes confondues, sauf annulées/terminées)
+/**
+ * @var array $reservations Liste des réservations globales futures à afficher dans le calendrier collectif.
+ */
 $reservations = $bdd->query("
     SELECT r.*, o.nomO, u.prenomU
     FROM Reservation r
@@ -124,7 +149,9 @@ $reservations = $bdd->query("
     ORDER BY r.dateD ASC
 ")->fetchAll();
 
-// Mes réservations à venir (pour pouvoir les annuler)
+/**
+ * @var array $mes_reservations Liste restreinte des réservations futures propres à l'adhérent connecté.
+ */
 $requeteMine = $bdd->prepare("
     SELECT r.*, o.nomO
     FROM Reservation r
@@ -195,6 +222,7 @@ $mes_reservations = $requeteMine->fetchAll();
                                 <td><?= date("d/m/Y", strtotime($r['datef'])) ?></td>
                                 <td>
                                     <?php
+                                        // Attribution de la classe CSS correspondante au statut de la ligne
                                         $cls = match($r['statutr']) {
                                             'en attente' => 'badge-recolte',
                                             'confirmée'  => 'badge-croissance',

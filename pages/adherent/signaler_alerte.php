@@ -1,28 +1,39 @@
 <?php
-// pages/adherent/signaler_alerte.php
-// Permet à un Adhérent de déclarer une alerte sanitaire sur ses propres cultures
-// et de consulter celles déjà signalées sur sa parcelle.
+/**
+ * pages/adherent/signaler_alerte.php
+ *
+ * Script permettant à un Adhérent de déclarer une alerte sanitaire sur ses propres cultures
+ * et de consulter l'historique complet des alertes signalées sur sa parcelle.
+ * Intègre une vérification stricte des attributions foncières pour interdire l'usurpation d'identité
+ * et applique le design pattern PRG (Post-Redirect-Get).
+ */
 
+// Sécurisation de l'accès à la page
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
 exiger_role('Adhérent');
 
+/**
+ * @var int $id_utilisateur Identifiant de l'adhérent connecté extrait de la session.
+ */
 $id_utilisateur = $_SESSION['id_utilisateur'];
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id_culture = $_POST['id_culture'] ?? '';
-    $nom_menace = trim($_POST['nom_menace'] ?? '');
+    // Extraction et nettoyage préliminaire des données soumises
+    $id_culture  = $_POST['id_culture'] ?? '';
+    $nom_menace  = trim($_POST['nom_menace'] ?? '');
     $description = trim($_POST['description'] ?? '');
-    $gravite = $_POST['niveau_gravite'] ?? '';
-    $traitement = trim($_POST['traitement_applique'] ?? '');
+    $gravite     = $_POST['niveau_gravite'] ?? '';
+    $traitement  = trim($_POST['traitement_applique'] ?? '');
 
+    // Validation 1 : Présence des paramètres obligatoires
     if (empty($id_culture) || empty($nom_menace) || empty($description) || empty($gravite)) {
         header("Location: index.php?page=alertes_adherent&msg=missing");
         exit;
     }
 
-    // Vérification stricte : la culture ciblée doit bien appartenir à une attribution
-    // active de cet adhérent (sinon, on rejette pour éviter toute injection d'ID arbitraire).
+    // Validation 2 : Protection contre les falsifications de requêtes (ID Tampering)
+    // On s'assure par une jointure stricte que la culture appartient bien à une attribution active de l'utilisateur connecté.
     $requeteCheck = $bdd->prepare("
         SELECT COUNT(*) FROM Culture c
         JOIN Attribution a ON c.id_attribution_seffectuer = a.id_attribution
@@ -31,26 +42,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           AND (a.date_fin IS NULL OR a.date_fin > CURRENT_DATE)
     ");
     $requeteCheck->execute([$id_culture, $id_utilisateur]);
+    
     if ($requeteCheck->fetchColumn() == 0) {
         header("Location: index.php?page=alertes_adherent&msg=forbidden");
         exit;
     }
 
     try {
+        // Initialisation de la transaction pour l'atomicité (Insertion de l'alerte + Génération des notifications de voisinage)
         $bdd->beginTransaction();
+        
+        // Insertion de l'alerte sanitaire à la date du jour
         $requete = $bdd->prepare("
             INSERT INTO AlerteSanitaire (descriptionALR, date_detection, est_resolue, nom_menace, niveau_gravite, traitement_applique, id_culture_est_signalee_sur)
             VALUES (?, CURRENT_DATE, FALSE, ?, ?, ?, ?)
         ");
         $requete->execute([$description, $nom_menace, $gravite, $traitement, $id_culture]);
 
-        // Propagation spatiale : notifier les exploitants des parcelles voisines (+ Tuteurs)
+        // Propagation de l'alerte : Notifie automatiquement les exploitants des parcelles limitrophes
         $nb_notif = propager_alerte_voisinage($bdd, $id_culture, $nom_menace, $gravite, $id_utilisateur);
 
+        // Validation définitive des opérations
         $bdd->commit();
         header("Location: index.php?page=alertes_adherent&msg=ok&notif=" . $nb_notif);
         exit;
     } catch (PDOException $e) {
+        // Restauration de l'état initial en cas de panne SQL
         if ($bdd->inTransaction()) $bdd->rollBack();
         header("Location: index.php?page=alertes_adherent&msg=err");
         exit;
@@ -60,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $titre = "Signaler une alerte sanitaire";
 include 'inclusions/entete.php';
 
-// Message à afficher après redirection
+// Traitement et affichage des messages d'information post-redirection
 $msg = "";
 if (isset($_GET['msg'])) {
     if ($_GET['msg'] === 'ok') {
@@ -70,12 +87,15 @@ if (isset($_GET['msg'])) {
             : " Aucune parcelle voisine active à notifier pour le moment.";
         $msg = "<div class='alert alert-success'>" . icon('check') . " Votre alerte sanitaire a bien été déclarée." . $sfx . "</div>";
     }
-    elseif ($_GET['msg'] === 'missing')  $msg = "<div class='alert alert-error'>" . icon('warning') . " Veuillez remplir tous les champs obligatoires.</div>";
+    elseif ($_GET['msg'] === 'missing')   $msg = "<div class='alert alert-error'>" . icon('warning') . " Veuillez remplir tous les champs obligatoires.</div>";
     elseif ($_GET['msg'] === 'forbidden') $msg = "<div class='alert alert-error'>" . icon('warning') . " Vous ne pouvez signaler une alerte que sur vos propres cultures.</div>";
-    elseif ($_GET['msg'] === 'err')      $msg = "<div class='alert alert-error'>" . icon('warning') . " Une erreur est survenue lors de l'enregistrement de l'alerte.</div>";
+    elseif ($_GET['msg'] === 'err')       $msg = "<div class='alert alert-error'>" . icon('warning') . " Une erreur est survenue lors de l'enregistrement de l'alerte.</div>";
 }
 
-// Cultures actives de l'adhérent connecté (sur sa parcelle attribuée)
+/**
+ * @var array $cultures_actives Liste de toutes les cultures en cours gérées par cet adhérent.
+ * Sert à alimenter dynamiquement le composant de sélection `<select>` du formulaire.
+ */
 $cultures_actives = $bdd->prepare("
     SELECT c.id_culture, pl.nom_variete, parc.secteurP, parc.numeroP
     FROM Culture c
@@ -90,7 +110,9 @@ $cultures_actives = $bdd->prepare("
 $cultures_actives->execute([$id_utilisateur]);
 $cultures_actives = $cultures_actives->fetchAll();
 
-// Historique des alertes existantes sur les cultures de cet adhérent
+/**
+ * @var array $alertes_existantes Historique complet de l'ensemble des alertes liées aux cultures de cet adhérent.
+ */
 $alertes_existantes = $bdd->prepare("
     SELECT al.*, pl.nom_variete, parc.secteurP, parc.numeroP
     FROM AlerteSanitaire al

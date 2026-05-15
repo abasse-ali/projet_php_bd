@@ -1,18 +1,31 @@
 <?php
-// pages/responsable/recoltes.php
+/**
+ * pages/responsable/recoltes.php
+ *
+ * Page d'analyse des récoltes destinée au rôle Responsable.
+ * Calcule et affiche l'historique des volumes de récoltes agrégés
+ * par année et par parcelle physique.
+ */
+
+// Sécurisation de l'accès et vérification du rôle
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
 exiger_role('Responsable');
 
 $titre = "Analyse des Récoltes";
 include 'inclusions/entete.php';
 
-// Requête avancée pour agréger les récoltes par parcelle et par année
+/**
+ * @var array $stats_recoltes Résultats de l'agrégation SQL.
+ * @var string $erreur_sql Message d'erreur détaillé destiné au débogage.
+ */
 $stats_recoltes = [];
 $erreur_sql = "";
 
 try {
+    // Agrégation avancée : extraction de l'année à partir de la date (EXTRACT)
+    // et sommation des quantités (SUM) regroupées par parcelle et par année (GROUP BY).
     $stats_recoltes = $bdd->query("
-        SELECT 
+        SELECT
             p.secteurP, p.numeroP,
             EXTRACT(YEAR FROM r.date_recolte) as annee,
             SUM(r.quantiter) as total_kg
@@ -24,6 +37,8 @@ try {
         ORDER BY annee DESC, total_kg DESC
     ")->fetchAll();
 } catch (PDOException $e) {
+    // En cas d'erreur de requête (ex: nom de colonne erroné), on interroge le dictionnaire 
+    // de données (information_schema) pour aider le développeur en listant les colonnes existantes.
     $cols = $bdd->query("SELECT column_name FROM information_schema.columns WHERE table_name ILIKE 'recolte'")->fetchAll(PDO::FETCH_COLUMN);
     $erreur_sql = icon('warning') . " <b>Erreur SQL :</b> " . htmlspecialchars($e->getMessage()) . "<br><br>" . icon('lightbulb') . " <b>Voici les colonnes qui existent VRAIMENT dans votre table Recolte :</b><br><span style='color:var(--color-primary-dark); font-family:monospace;'>" . implode(', ', $cols) . "</span><br><br><i>" . icon('arrow-right') . " Remplacez les noms (comme <code>r.quantite</code>, <code>r.date_recolte</code> ou <code>r.id_culture_produire</code>) dans la requête par les bons noms listés ci-dessus !</i>";
 }
@@ -39,7 +54,7 @@ try {
         <?php if($erreur_sql): ?>
             <div class="alert alert-warning"><?= $erreur_sql ?></div>
         <?php endif; ?>
-        
+
         <h3>Statistiques annuelles</h3>
         <table>
             <thead>

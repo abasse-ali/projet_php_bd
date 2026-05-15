@@ -1,11 +1,24 @@
 <?php
-// pages/commun/profil.php
+/**
+ * pages/commun/profil.php
+ *
+ * Page de gestion du profil utilisateur.
+ * Permet à tout membre connecté de mettre à jour ses informations personnelles
+ * (Nom, Prénom, Email) et de modifier son mot de passe de manière sécurisée.
+ * Applique le pattern PRG (Post-Redirect-Get) et met à jour la session active.
+ */
+
+// Sécurisation de l'accès à la page
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
 
+/**
+ * @var int $id_utilisateur Identifiant unique de l'utilisateur connecté.
+ */
 $id_utilisateur = $_SESSION['id_utilisateur'];
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Récupération et nettoyage des données du formulaire
     $nom              = trim($_POST['nom'] ?? '');
     $prenom           = trim($_POST['prenom'] ?? '');
     $email            = trim($_POST['email'] ?? '');
@@ -13,18 +26,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new_password     = $_POST['new_password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
+    // Validation 1 : Vérification des champs obligatoires
     if (empty($nom) || empty($prenom) || empty($email)) {
         header("Location: index.php?page=profil&msg=missing");
         exit;
     }
 
+    // Validation 2 : Format de l'adresse email
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         header("Location: index.php?page=profil&msg=email_invalid");
         exit;
     }
 
     try {
-        // 1. Vérifier que le nouvel email n'est pas déjà pris par un AUTRE utilisateur
+        // 1. Vérification de l'unicité du nouvel email (en excluant le compte actuel)
         $requeteCheck = $bdd->prepare("SELECT COUNT(*) FROM Utilisateur WHERE email = ? AND id_utilisateur != ?");
         $requeteCheck->execute([$email, $id_utilisateur]);
         if ($requeteCheck->fetchColumn() > 0) {
@@ -32,12 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // 2. Récupération du hash actuel pour les vérifications de mot de passe
+        // 2. Récupération du hachage du mot de passe actuel pour vérification de sécurité
         $requeteCur = $bdd->prepare("SELECT mot_de_passe FROM Utilisateur WHERE id_utilisateur = ?");
         $requeteCur->execute([$id_utilisateur]);
         $current_hash = $requeteCur->fetchColumn();
 
-        // 3. Si l'utilisateur veut changer son mot de passe, on vérifie l'ancien
+        // 3. Traitement de la modification du mot de passe (si les champs sont complétés)
         $update_password = false;
         if (!empty($new_password) || !empty($confirm_password)) {
             if (empty($current_password)) {
@@ -59,17 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $update_password = true;
         }
 
-        // 4. Mise à jour des informations personnelles
+        // 4. Mise à jour des informations de base (Nom, Prénom, Email)
         $requeteUpdate = $bdd->prepare("UPDATE Utilisateur SET nomU = ?, prenomU = ?, email = ? WHERE id_utilisateur = ?");
         $requeteUpdate->execute([$nom, $prenom, $email, $id_utilisateur]);
 
-        // 5. Mise à jour du mot de passe si demandée
+        // 5. Application du nouveau mot de passe si le changement a été validé
         if ($update_password) {
             $new_hash = password_hash($new_password, PASSWORD_BCRYPT);
             $bdd->prepare("UPDATE Utilisateur SET mot_de_passe = ? WHERE id_utilisateur = ?")->execute([$new_hash, $id_utilisateur]);
         }
 
-        // 6. Mise à jour du prénom en session pour rafraîchir le header
+        // 6. Synchronisation du prénom en session pour actualiser l'affichage dans le header
         $_SESSION['nom'] = $prenom;
 
         $code = $update_password ? 'ok_pwd' : 'ok';
@@ -84,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $titre = "Mon Profil";
 include 'inclusions/entete.php';
 
+// Traitement et formatage des messages d'état retournés par les requêtes GET
 $msg = "";
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
@@ -100,6 +116,9 @@ if (isset($_GET['msg'])) {
     }
 }
 
+/**
+ * @var array $utilisateur Contient les informations à jour du membre pour pré-remplir les champs HTML.
+ */
 $requete = $bdd->prepare("SELECT nomU, prenomU, email, roleU FROM Utilisateur WHERE id_utilisateur = ?");
 $requete->execute([$id_utilisateur]);
 $utilisateur = $requete->fetch();

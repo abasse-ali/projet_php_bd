@@ -1,20 +1,36 @@
 <?php
-// pages/admin/ressources.php
+/**
+ * pages/administrateur/ressources.php
+ *
+ * Page d'administration pour la gestion des ressources et de la logistique.
+ * Permet aux Administrateurs de superviser et piloter les réservations d'outils partagés,
+ * de valider les demandes en attente ou d'annuler des réservations actives afin de gérer
+ * les éventuels conflits d'agenda.
+ */
+
+// Sécurisation stricte de l'accès à l'espace d'administration
 if (!isset($_SESSION['id_utilisateur']) || ($_SESSION['roleU'] ?? '') !== 'Administrateur') {
     die("Accès interdit : Réservé aux Administrateurs.");
 }
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
+/**
+ * Traitement des actions sur les réservations (confirmation ou annulation).
+ * Applique le design pattern PRG (Post-Redirect-Get) pour sécuriser le rafraîchissement de page.
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_reservation'])) {
     $action = $_POST['action'] ?? '';
     $id_resa = $_POST['id_reservation'];
+    
     try {
         if ($action === 'annuler') {
+            // Passage de la réservation à l'état annulé
             $requete = $bdd->prepare("UPDATE Reservation SET statutR = 'annulée' WHERE id_reservation = ?");
             $requete->execute([$id_resa]);
             header("Location: index.php?page=admin_ressources&msg=cancel_ok");
             exit;
         } elseif ($action === 'confirmer') {
+            // Confirmation d'une réservation, uniquement si elle était en attente
             $requete = $bdd->prepare("UPDATE Reservation SET statutR = 'confirmée' WHERE id_reservation = ? AND statutR = 'en attente'");
             $requete->execute([$id_resa]);
             header("Location: index.php?page=admin_ressources&msg=confirm_ok");
@@ -28,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_reservation'])) {
 
 $titre = "Ressources & Logistique - Admin";
 include 'inclusions/entete.php';
+
+// Gestion des messages de retour post-redirection
 $msg = "";
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
@@ -37,9 +55,12 @@ if (isset($_GET['msg'])) {
     }
 }
 
-// Récupération de toutes les réservations actives
+/**
+ * @var array $reservations Liste de toutes les réservations en cours ou futures.
+ * Récupère par jointures les informations de l'outil et de l'utilisateur associé.
+ */
 $reservations = $bdd->query("
-    SELECT r.id_reservation, r.dateD, r.dateF, r.statutR, o.nomO, u.nomU, u.prenomU 
+    SELECT r.id_reservation, r.dateD, r.dateF, r.statutR, o.nomO, u.nomU, u.prenomU
     FROM Reservation r
     JOIN Outil o ON r.id_outil_concerner = o.id_outil
     JOIN Utilisateur u ON r.id_utilisateur_effectuer = u.id_utilisateur
@@ -74,6 +95,7 @@ $reservations = $bdd->query("
                     <tr><td colspan="5">Aucune réservation active.</td></tr>
                 <?php else: ?>
                     <?php foreach($reservations as $r):
+                        // Association dynamique de la classe CSS du badge selon le statut
                         $cls = match($r['statutr']) {
                             'en attente' => 'badge-recolte',
                             'confirmée'  => 'badge-croissance',

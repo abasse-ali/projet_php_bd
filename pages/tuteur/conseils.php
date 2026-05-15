@@ -1,39 +1,61 @@
 <?php
-// pages/tuteur/conseils.php
+/**
+ * pages/tuteur/conseils.php
+ *
+ * Script permettant à un tuteur de rédiger et publier un conseil culturel.
+ * Le conseil peut être optionnellement lié à un relevé météorologique spécifique.
+ * Implémente le pattern PRG (Post-Redirect-Get) pour sécuriser la soumission du formulaire.
+ */
+
+// Sécurisation de l'accès à la page
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
+
+// Vérification des droits : réservé au rôle 'Tuteur'
 exiger_role('Tuteur');
 
+/**
+ * @var int $id_auteur Identifiant en session du tuteur rédigeant le conseil.
+ */
 $id_auteur = $_SESSION['id_utilisateur'];
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Récupération et nettoyage des données soumises
     $titre    = trim($_POST['titre'] ?? '');
     $contenu  = trim($_POST['contenu'] ?? '');
     $meteo_id = !empty($_POST['meteo_id']) ? $_POST['meteo_id'] : null;
 
+    // Validation des champs obligatoires
     if (empty($titre) || empty($contenu)) {
         header("Location: index.php?page=conseils&msg=missing");
         exit;
     }
 
     try {
+        // Démarrage de la transaction : on garantit l'insertion du conseil 
+        // ET de son lien météo facultatif en une seule opération cohérente.
         $bdd->beginTransaction();
 
-        // 1. Insertion du conseil (RETURNING id_conseil propre à PostgreSQL)
+        // 1. Insertion du conseil
+        // Utilisation de "RETURNING id_conseil" (spécificité PostgreSQL) pour obtenir 
+        // directement l'ID de la ligne nouvellement insérée sans requête supplémentaire.
         $requete = $bdd->prepare("INSERT INTO ConseilCultural (titreC, contenuC, date_publication, id_utilisateur_redigtuteur) VALUES (?, ?, CURRENT_DATE, ?) RETURNING id_conseil");
         $requete->execute([$titre, $contenu, $id_auteur]);
         $id_conseil_genere = $requete->fetchColumn();
 
         // 2. Lien météo facultatif
+        // Si l'utilisateur a sélectionné une situation météo, on lie les deux tables (table de jointure `justifier`).
         if ($meteo_id && $id_conseil_genere) {
             $requeteJustifier = $bdd->prepare("INSERT INTO justifier (id_meteo, id_conseil) VALUES (?, ?)");
             $requeteJustifier->execute([$meteo_id, $id_conseil_genere]);
         }
 
+        // Validation et sauvegarde des modifications dans la base de données
         $bdd->commit();
         header("Location: index.php?page=conseils&msg=ok");
         exit;
     } catch (PDOException $e) {
+        // Annulation des opérations en cas d'erreur
         $bdd->rollBack();
         header("Location: index.php?page=conseils&msg=db_err");
         exit;
@@ -43,19 +65,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $titre = "Publier un Conseil";
 include 'inclusions/entete.php';
 
+// Gestion et affichage des messages d'état post-redirection
 $msg = "";
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
-        case 'ok':       $msg = "<div class='alert alert-success'>" . icon('check') . " Conseil publié avec succès. Les adhérents en seront notifiés.</div>"; break;
-        case 'missing':  $msg = "<div class='alert alert-error'>" . icon('warning') . " Le titre et le contenu sont obligatoires.</div>"; break;
-        case 'db_err':   $msg = "<div class='alert alert-error'>" . icon('warning') . " Erreur lors de la publication du conseil.</div>"; break;
+        case 'ok':       
+            $msg = "<div class='alert alert-success'>" . icon('check') . " Conseil publié avec succès. Les adhérents en seront notifiés.</div>"; 
+            break;
+        case 'missing':  
+            $msg = "<div class='alert alert-error'>" . icon('warning') . " Le titre et le contenu sont obligatoires.</div>"; 
+            break;
+        case 'db_err':   
+            $msg = "<div class='alert alert-error'>" . icon('warning') . " Erreur lors de la publication du conseil.</div>"; 
+            break;
     }
 }
 
-// Récupération des situations météo (les 10 plus récentes) pour permettre la liaison
+/**
+ * @var array $meteos 
+ * Extraction des 10 relevés météo les plus récents pour alimenter 
+ * la liste déroulante optionnelle du formulaire.
+ */
 $meteos = $bdd->query("SELECT id_meteo, jour, descm, tempm FROM Meteo ORDER BY jour DESC LIMIT 10")->fetchAll();
 
-// Liste des conseils déjà publiés par ce tuteur (historique sur la même page)
+/**
+ * @var array $mes_conseils 
+ * Récupération de l'historique des conseils spécifiquement publiés 
+ * par le tuteur actuellement connecté.
+ */
 $requeteMine = $bdd->prepare("SELECT id_conseil, titreC, date_publication FROM ConseilCultural WHERE id_utilisateur_redigtuteur = ? ORDER BY date_publication DESC LIMIT 10");
 $requeteMine->execute([$id_auteur]);
 $mes_conseils = $requeteMine->fetchAll();

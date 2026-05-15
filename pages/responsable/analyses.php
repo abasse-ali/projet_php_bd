@@ -1,5 +1,13 @@
 <?php
-// pages/responsable/analyses.php
+/**
+ * pages/responsable/analyses.php
+ *
+ * Tableau de bord décisionnel multi-rôles.
+ * Fournit des indicateurs analytiques complexes selon le rôle de l'utilisateur :
+ * - Responsable : Suivi de la rotation des cultures et analyse de la biodiversité.
+ * - Trésorier : Alertes sur les stocks critiques de la grainothèque.
+ */
+
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
 
 // Sécurisation stricte : Tableau de bord décisionnel réservé aux instances décisionnaires
@@ -8,7 +16,14 @@ exiger_role(['Responsable', 'Trésorier', 'Administrateur']);
 $titre = "Tableau de Bord Décisionnel";
 include 'inclusions/entete.php';
 
-// On récupère le rôle de l'utilisateur pour afficher uniquement les encarts qui le concernent.
+/**
+ * Détermination des permissions d'affichage en fonction du rôle.
+ * L'administrateur hérite des deux vues (Responsable et Trésorier).
+ *
+ * @var string $roleActuel
+ * @var bool   $afficher_responsable
+ * @var bool   $afficher_tresorier
+ */
 $roleActuel = $_SESSION['roleU'] ?? '';
 $afficher_responsable = in_array($roleActuel, ['Responsable', 'Administrateur'], true);
 $afficher_tresorier   = in_array($roleActuel, ['Trésorier', 'Administrateur'], true);
@@ -24,17 +39,19 @@ try {
     // VUE RESPONSABLE DU TERRAIN
     // ==============================================================================
     if ($afficher_responsable) {
-        
-        // --- ANALYSE 1 : Optimisation de la rotation des cultures ---
-        // Logique : Jointures multiples (JOIN) pour relier la parcelle à son occupant, 
-        // puis à la culture en cours/terminée, et enfin aux détails de la plante.
-        // On trie par Parcelle puis chronologiquement pour voir l'historique d'une même terre.
+
+        /**
+         * --- ANALYSE 1 : Optimisation de la rotation des cultures ---
+         * Logique : Jointures multiples (JOIN) pour relier la parcelle à son occupant,
+         * puis à la culture en cours/terminée, et enfin aux détails de la plante.
+         * Tri : Par Parcelle puis chronologiquement pour voir l'historique d'une même terre.
+         */
         $requeteRotation = $bdd->query("
-            SELECT 
-                p.numeroP, 
-                p.secteurP, 
-                pl.nom_variete, 
-                c.date_semis 
+            SELECT
+                p.numeroP,
+                p.secteurP,
+                pl.nom_variete,
+                c.date_semis
             FROM Parcelle p
             JOIN Attribution a ON p.id_parcelle = a.id_parcelle_assigner
             JOIN Culture c ON a.id_attribution = c.id_attribution_seffectuer
@@ -43,14 +60,16 @@ try {
         ");
         $rotation_data = $requeteRotation->fetchAll();
 
-        // --- ANALYSE 2 : Analyse de la biodiversité observée ---
-        // Logique : Interrogation de la table d'association `observer`.
-        // Fonction d'agrégation COUNT(DISTINCT) pour compter le nombre d'espèces uniques.
-        // La clause HAVING filtre post-regroupement pour exclure les parcelles pauvres en biodiversité (<=1).
+        /**
+         * --- ANALYSE 2 : Analyse de la biodiversité observée ---
+         * Logique : Interrogation de la table d'association `observer`.
+         * Fonction d'agrégation COUNT(DISTINCT) pour compter le nombre d'espèces uniques.
+         * La clause HAVING filtre post-regroupement pour exclure les parcelles pauvres en biodiversité (<=1).
+         */
         $requeteBio = $bdd->query("
-            SELECT 
-                p.numeroP, 
-                p.secteurP, 
+            SELECT
+                p.numeroP,
+                p.secteurP,
                 COUNT(DISTINCT o.espece) as nb_especes
             FROM observer o
             JOIN Parcelle p ON o.id_parcelle = p.id_parcelle
@@ -65,17 +84,19 @@ try {
     // VUE TRÉSORIER / GESTIONNAIRE DES STOCKS
     // ==============================================================================
     if ($afficher_tresorier) {
-        
-        // --- ANALYSE 3 : Gestion des stocks de semences (Alerte Grainothèque) ---
-        // Logique : Affichage conditionnel restrictif via WHERE.
-        // On repère instantanément les semences dont le stock atteint un seuil de risque (<= 15)
-        // Tri ascendant pour mettre les urgences absolues en premier.
+
+        /**
+         * --- ANALYSE 3 : Gestion des stocks de semences (Alerte Grainothèque) ---
+         * Logique : Affichage conditionnel restrictif via WHERE.
+         * On repère instantanément les semences dont le stock atteint un seuil de risque (<= 15)
+         * Tri ascendant pour mettre les urgences absolues en premier.
+         */
         $requeteStock = $bdd->query("
-            SELECT 
-                nomS, 
-                stock_mis_a_jour 
-            FROM Semence 
-            WHERE stock_mis_a_jour <= 15 
+            SELECT
+                nomS,
+                stock_mis_a_jour
+            FROM Semence
+            WHERE stock_mis_a_jour <= 15
             ORDER BY stock_mis_a_jour ASC
         ");
         $stocks_data = $requeteStock->fetchAll();
@@ -102,17 +123,15 @@ try {
         </div>
     <?php endif; ?>
 
-    <!-- CSS Grid Layout (Référé via style.css "dashboard-grid" = 2fr 1fr) -->
     <div class="dashboard-grid">
-        
-        <!-- COLONNE GAUCHE (2fr) : VUE RESPONSABLE (Analyses 1 & 2) -->
+
         <div class="main-column">
             <?php if ($afficher_responsable): ?>
-                
+
                 <article class="card">
                     <h3>Rotation des Cultures</h3>
                     <p>Suivi chronologique des plantations par parcelle pour anticiper et prévenir l'appauvrissement des sols.</p>
-                    
+
                     <table>
                         <thead>
                             <tr>
@@ -175,10 +194,9 @@ try {
             <?php endif; ?>
         </div>
 
-        <!-- COLONNE DROITE (1fr) : VUE TRÉSORIER (Analyse 3) -->
         <div class="side-column">
             <?php if ($afficher_tresorier): ?>
-                
+
                 <article class="card">
                     <h3>Alerte Grainotheque</h3>
                     <p>Suivi des stocks de semences ayant atteint le seuil critique (≤ 15 unités). Action d'approvisionnement requise.</p>
@@ -216,7 +234,7 @@ try {
                 </div>
             <?php endif; ?>
         </div>
-        
+
     </div>
 </div>
 

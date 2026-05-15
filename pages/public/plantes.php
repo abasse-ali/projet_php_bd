@@ -1,14 +1,28 @@
 <?php
-// pages/public/plantes.php
-// Catalogue botanique consultable par tous les visiteurs et adhérents.
+/**
+ * pages/public/plantes.php
+ *
+ * Catalogue botanique consultable par tous les visiteurs et adhérents.
+ * Ce script récupère et affiche la liste des plantes disponibles dans la grainothèque,
+ * incluant leurs périodes de semis/récolte et leurs associations (compagnonnage).
+ */
 
 $titre = "Catalogue des Plantes";
 include 'inclusions/entete.php';
 
-// Récupération du catalogue complet (une seule requête)
+/**
+ * @var array $plantes
+ * Récupération du catalogue complet de toutes les variétés de plantes enregistrées.
+ */
 $plantes = $bdd->query("SELECT * FROM Plante ORDER BY nom_variete")->fetchAll();
 
-// Récupération de TOUTES les associations en une seule requête, puis regroupement par plante (évite le N+1).
+/**
+ * @var array $associations_raw
+ * Récupération de TOUTES les associations (compagnonnage) en une seule requête.
+ * L'utilisation de UNION ALL permet de récupérer les relations de manière bidirectionnelle
+ * (E1 -> E2 et E2 -> E1) car la table `saccorder` ne stocke l'association que dans un sens.
+ * Cela permet d'éviter le problème des requêtes N+1 (une requête par plante dans la boucle).
+ */
 $associations_raw = $bdd->query("
     SELECT s.id_plante_E1 AS id_source, s.id_plante_E2 AS id_partenaire, p.nom_variete AS partenaire_nom, s.type_accord
     FROM saccorder s
@@ -19,12 +33,21 @@ $associations_raw = $bdd->query("
     JOIN Plante p ON p.id_plante = s.id_plante_E1
 ")->fetchAll();
 
+/**
+ * @var array $associations_by_plante
+ * Restructuration des données brutes en un tableau associatif groupé par l'ID de la plante source.
+ * Facilite l'accès direct aux associations lors du parcours des plantes.
+ */
 $associations_by_plante = [];
 foreach ($associations_raw as $a) {
     $associations_by_plante[$a['id_source']][] = $a;
 }
 
-// Petit helper pour traduire un numéro de mois en libellé court
+/**
+ * @var array $mois_court
+ * Helper pour traduire un numéro de mois (1-12) en libellé court.
+ * L'index 0 est intentionnellement vide pour faire correspondre l'index 1 à 'Jan'.
+ */
 $mois_court = ['', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'];
 ?>
 
@@ -44,6 +67,7 @@ $mois_court = ['', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 
     <?php else: ?>
         <div class="plantes-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
             <?php foreach($plantes as $p):
+                // Extraction, typage et sécurisation des données de la plante courante
                 $semis_debut = (int) $p['num_mois_semis_debut'];
                 $semis_fin   = (int) $p['num_mois_semis_fin'];
                 $recol_debut = (int) $p['num_mois_recol_deb'];
@@ -77,6 +101,7 @@ $mois_court = ['', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 
                         <?php else: ?>
                             <ul style="list-style: none; padding: 0; margin-top: 0.3rem;">
                                 <?php foreach ($accords as $a):
+                                    // Détermination de l'impact visuel selon le type d'accord (bénéfique ou néfaste)
                                     $est_benefique = (stripos($a['type_accord'], 'bénéfique') !== false);
                                     $couleur = $est_benefique ? '#166534' : '#991b1b';
                                 ?>

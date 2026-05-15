@@ -1,24 +1,35 @@
 <?php
-// pages/tuteur/alertes.php
+/**
+ * pages/tuteur/alertes.php
+ *
+ * Script de contrôleur et vue permettant aux Tuteurs de déclarer une alerte sanitaire.
+ * Ce script implémente le design pattern PRG (Post-Redirect-Get) pour éviter les doubles
+ * soumissions de formulaire. Il gère l'insertion de l'alerte en base de données et 
+ * déclenche la notification des parcelles voisines.
+ */
+
+// Sécurisation de base de la session
 if (!isset($_SESSION['id_utilisateur'])) die("Accès interdit");
 
-// Seul le Tuteur peut déclarer des alertes sanitaires
+// Vérification stricte des droits : Seul le rôle 'Tuteur' peut déclarer des alertes sanitaires
 exiger_role('Tuteur');
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Extraction et nettoyage des données soumises
     $id_culture  = $_POST['id_culture'] ?? '';
     $nom_menace  = trim($_POST['nom_menace'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $gravite     = $_POST['niveau_gravite'] ?? '';
     $traitement  = trim($_POST['traitement_applique'] ?? '');
 
+    // Validation 1 : Vérification de la présence des champs obligatoires
     if (empty($id_culture) || empty($nom_menace) || empty($description) || empty($gravite)) {
         header("Location: index.php?page=alertes&msg=missing");
         exit;
     }
 
-    // Validation : la gravité doit faire partie d'une liste fermée
+    // Validation 2 : La gravité doit correspondre strictement aux valeurs de l'ENUM de la base
     $gravites_autorisees = ['faible', 'modéré', 'élevé', 'critique'];
     if (!in_array($gravite, $gravites_autorisees, true)) {
         header("Location: index.php?page=alertes&msg=gravite_invalid");
@@ -26,20 +37,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
+        // Début de la transaction pour garantir l'intégrité de la base
+        // (Insertion de l'alerte + Création des notifications)
         $bdd->beginTransaction();
+        
+        // Insertion de la nouvelle alerte sanitaire
         $requete = $bdd->prepare("
             INSERT INTO AlerteSanitaire (descriptionALR, date_detection, est_resolue, nom_menace, niveau_gravite, traitement_applique, id_culture_est_signalee_sur)
             VALUES (?, CURRENT_DATE, FALSE, ?, ?, ?, ?)
         ");
         $requete->execute([$description, $nom_menace, $gravite, $traitement, $id_culture]);
 
-        // Propagation spatiale : notifier les exploitants des parcelles voisines (+ Tuteurs)
+        // Propagation spatiale : notification automatique des exploitants des parcelles voisines et des Tuteurs
         $nb_notif = propager_alerte_voisinage($bdd, $id_culture, $nom_menace, $gravite, $_SESSION['id_utilisateur']);
 
+        // Validation de la transaction
         $bdd->commit();
+        
+        // Redirection en cas de succès avec le nombre de notifications générées
         header("Location: index.php?page=alertes&msg=ok&notif=" . $nb_notif);
         exit;
+        
     } catch (PDOException $e) {
+        // Annulation des modifications en cas d'erreur SQL
         if ($bdd->inTransaction()) $bdd->rollBack();
         header("Location: index.php?page=alertes&msg=db_err");
         exit;
@@ -49,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $titre = "Déclarer une alerte sanitaire";
 include 'inclusions/entete.php';
 
+// Gestion de l'affichage des messages de notification post-redirection
 $msg = "";
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
@@ -59,13 +80,23 @@ if (isset($_GET['msg'])) {
                 : " Aucune parcelle voisine active à notifier.";
             $msg = "<div class='alert alert-success'>" . icon('check') . " L'alerte sanitaire a bien été déclarée." . $sfx . "</div>";
             break;
-        case 'missing':         $msg = "<div class='alert alert-error'>" . icon('warning') . " Veuillez remplir tous les champs obligatoires.</div>"; break;
-        case 'gravite_invalid': $msg = "<div class='alert alert-error'>" . icon('warning') . " Niveau de gravité non reconnu.</div>"; break;
-        case 'db_err':          $msg = "<div class='alert alert-error'>" . icon('warning') . " Erreur lors de l'enregistrement de l'alerte.</div>"; break;
+        case 'missing':         
+            $msg = "<div class='alert alert-error'>" . icon('warning') . " Veuillez remplir tous les champs obligatoires.</div>"; 
+            break;
+        case 'gravite_invalid': 
+            $msg = "<div class='alert alert-error'>" . icon('warning') . " Niveau de gravité non reconnu.</div>"; 
+            break;
+        case 'db_err':          
+            $msg = "<div class='alert alert-error'>" . icon('warning') . " Erreur lors de l'enregistrement de l'alerte.</div>"; 
+            break;
     }
 }
 
-// Récupération des cultures actives (sur une attribution non clôturée) pour lier l'alerte
+/**
+ * @var array $cultures_actives 
+ * Récupération de toutes les cultures actives (sur une attribution non clôturée).
+ * Sert à alimenter la liste déroulante `<select>` du formulaire de déclaration d'alerte.
+ */
 $cultures_actives = $bdd->query("
     SELECT c.id_culture, p.nom_variete, parc.secteurP, parc.numeroP, u.prenomU, u.nomU
     FROM Culture c

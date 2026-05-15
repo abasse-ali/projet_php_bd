@@ -1,12 +1,25 @@
 <?php
-// pages/admin/terrain.php
+/**
+ * pages/administrateur/terrain.php
+ *
+ * Espace d'administration pour la supervision du foncier et de l'agronomie.
+ * Permet aux Administrateurs de suivre les alertes sanitaires actives sur les cultures
+ * et de les clôturer une fois les menaces maîtrisées ou résolues.
+ */
+
+// Sécurisation stricte de l'accès à l'espace d'administration
 if (!isset($_SESSION['id_utilisateur']) || ($_SESSION['roleU'] ?? '') !== 'Administrateur') {
     die("Accès interdit : Réservé aux Administrateurs.");
 }
 
 // --- TRAITEMENT POST (PRG Pattern) AVANT le header ---
+/**
+ * Traitement de la résolution d'une alerte sanitaire.
+ * Applique le design pattern PRG (Post-Redirect-Get) pour éviter le renvoi de formulaire au rafraîchissement.
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cloturer_alerte'])) {
     try {
+        // Clôture de l'alerte en basculant son indicateur booléen à TRUE
         $requete = $bdd->prepare("UPDATE AlerteSanitaire SET est_resolue = TRUE WHERE id_alerte = ?");
         $requete->execute([$_POST['id_alerte']]);
         header("Location: index.php?page=admin_terrain&msg=ok");
@@ -20,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cloturer_alerte'])) {
 $titre = "Foncier & Agronomie - Admin";
 include 'inclusions/entete.php';
 
+// Gestion et affichage des messages d'état post-redirection
 $msg = "";
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
@@ -28,7 +42,11 @@ if (isset($_GET['msg'])) {
     }
 }
 
-// Récupération des alertes non résolues
+/**
+ * @var array $alertes Liste des menaces phytosanitaires actives (non résolues).
+ * Jointures multiples permettant d'associer l'alerte à la culture impactée,
+ * la parcelle physique correspondante et l'identité botanique de la variété végétale.
+ */
 $alertes = $bdd->query("
     SELECT a.*, p.secteurP, p.numeroP, pl.nom_variete
     FROM AlerteSanitaire a
@@ -72,7 +90,8 @@ $alertes = $bdd->query("
                         <td>Sect. <?= htmlspecialchars($a['secteurp'] . '-' . $a['numerop']) ?> <br><small class="text-muted"><?= htmlspecialchars($a['nom_variete']) ?></small></td>
                         <td><strong><?= htmlspecialchars($a['nom_menace']) ?></strong><br><small><?= htmlspecialchars($a['descriptionalr']) ?></small></td>
                         <td>
-                            <?php 
+                            <?php
+                                // Adaptation de la charte graphique selon la sévérité du signalement
                                 $couleur = $a['niveau_gravite'] === 'critique' ? 'background: #991b1b; color: white;' : 'background: #fca5a5; color: #991b1b;';
                             ?>
                             <span class="badge" style="<?= $couleur ?>"><?= strtoupper(htmlspecialchars($a['niveau_gravite'])) ?></span>

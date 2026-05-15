@@ -10,6 +10,11 @@ CREATE EXTENSION IF NOT EXISTS citext;
 -- TABLES INDEPENDANTES
 -- ============================================================
 
+/**
+ * Table Utilisateur
+ * Stocke les comptes des membres du jardin partagé.
+ * Contient des contraintes sur les rôles autorisés et la sécurité du mot de passe.
+ */
 CREATE TABLE Utilisateur (
     id_utilisateur SERIAL PRIMARY KEY,
     nomU VARCHAR(100) NOT NULL,
@@ -20,6 +25,11 @@ CREATE TABLE Utilisateur (
     email CITEXT NOT NULL UNIQUE
 );
 
+/**
+ * Table Parcelle
+ * Représente un espace de culture physique.
+ * Assure qu'il n'y a pas de doublon de numéro au sein d'un même secteur.
+ */
 CREATE TABLE Parcelle (
     id_parcelle SERIAL PRIMARY KEY,
     surfaceP NUMERIC(10,2) NOT NULL CHECK (surfaceP > 0),
@@ -28,6 +38,11 @@ CREATE TABLE Parcelle (
     UNIQUE (secteurP, numeroP)
 );
 
+/**
+ * Table Plante
+ * Catalogue des végétaux cultivables avec leurs instructions et périodes.
+ * Vérifie la cohérence temporelle des périodes de semis et de récolte (fin >= début).
+ */
 CREATE TABLE Plante (
     id_plante SERIAL PRIMARY KEY,
     nom_variete VARCHAR(100) NOT NULL,
@@ -41,6 +56,10 @@ CREATE TABLE Plante (
     CONSTRAINT chk_mois_recol CHECK (num_mois_recol_fin >= num_mois_recol_deb)
 );
 
+/**
+ * Table Outil
+ * Inventaire du matériel partagé, incluant son état de fonctionnement.
+ */
 CREATE TABLE Outil (
     id_outil SERIAL PRIMARY KEY,
     nomO VARCHAR(100) NOT NULL,
@@ -49,6 +68,10 @@ CREATE TABLE Outil (
     etat_physique VARCHAR(50) NOT NULL CHECK (etat_physique IN ('Opérationnel', 'Abîmé', 'HS'))
 );
 
+/**
+ * Table Meteo
+ * Relevés climatiques quotidiens du site.
+ */
 CREATE TABLE Meteo (
     id_meteo SERIAL PRIMARY KEY,
     jour DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -61,6 +84,10 @@ CREATE TABLE Meteo (
 -- TABLES DEPENDANTES (1er niveau)
 -- ============================================================
 
+/**
+ * Table Semence
+ * Gestion du stock des graines disponibles. Lié à une variété de plante et au trésorier.
+ */
 CREATE TABLE Semence (
     id_semence SERIAL PRIMARY KEY,
     nomS VARCHAR(100) NOT NULL,
@@ -69,6 +96,10 @@ CREATE TABLE Semence (
     id_utilisateur_gerer_resp INT REFERENCES Utilisateur(id_utilisateur)
 );
 
+/**
+ * Table ConseilCultural
+ * Fiches de recommandations rédigées par les tuteurs pour les adhérents.
+ */
 CREATE TABLE ConseilCultural (
     id_conseil SERIAL PRIMARY KEY,
     titreC VARCHAR(255) NOT NULL,
@@ -78,6 +109,10 @@ CREATE TABLE ConseilCultural (
     CONSTRAINT chk_conseil_date_notnull CHECK (date_publication IS NOT NULL)
 );
 
+/**
+ * Table Contribution
+ * Dons (matériels, semences) proposés par les utilisateurs.
+ */
 CREATE TABLE Contribution (
     id_contribution SERIAL PRIMARY KEY,
     date_contribution DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -87,6 +122,10 @@ CREATE TABLE Contribution (
     id_utilisateur_apporter INT NOT NULL REFERENCES Utilisateur(id_utilisateur)
 );
 
+/**
+ * Table Attribution
+ * Assignation d'une parcelle à un utilisateur pour une période donnée.
+ */
 CREATE TABLE Attribution (
     id_attribution SERIAL PRIMARY KEY,
     date_attribution DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -95,6 +134,11 @@ CREATE TABLE Attribution (
     id_utilisateur_fournir INT NOT NULL REFERENCES Utilisateur(id_utilisateur)
 );
 
+/**
+ * Table Reservation
+ * Demandes d'emprunt d'outils par les utilisateurs.
+ * Vérifie que la date de fin n'est pas antérieure à la date de début.
+ */
 CREATE TABLE Reservation (
     id_reservation SERIAL PRIMARY KEY,
     dateD DATE NOT NULL,
@@ -105,6 +149,10 @@ CREATE TABLE Reservation (
     CONSTRAINT chk_reservation_dates CHECK (dateF >= dateD)
 );
 
+/**
+ * Table Notification
+ * Système d'alertes internes envoyées aux utilisateurs.
+ */
 CREATE TABLE Notification (
     id_notification SERIAL PRIMARY KEY,
     titreN VARCHAR(255) NOT NULL,
@@ -119,6 +167,10 @@ CREATE TABLE Notification (
 -- TABLES DEPENDANTES (2ème niveau)
 -- ============================================================
 
+/**
+ * Table Culture
+ * Instanciation d'une plantation sur une parcelle attribuée.
+ */
 CREATE TABLE Culture (
     id_culture SERIAL PRIMARY KEY,
     date_semis DATE NOT NULL,
@@ -132,6 +184,10 @@ CREATE TABLE Culture (
 -- TABLES DEPENDANTES (3ème niveau)
 -- ============================================================
 
+/**
+ * Table Recolte
+ * Quantités produites à l'issue d'une culture.
+ */
 CREATE TABLE Recolte (
     id_recolte SERIAL PRIMARY KEY,
     date_recolte DATE NOT NULL,
@@ -141,6 +197,10 @@ CREATE TABLE Recolte (
     id_culture_produire INT NOT NULL REFERENCES Culture(id_culture)
 );
 
+/**
+ * Table AlerteSanitaire
+ * Signalement de maladies ou nuisibles constatés sur une culture.
+ */
 CREATE TABLE AlerteSanitaire (
     id_alerte SERIAL PRIMARY KEY,
     descriptionALR TEXT NOT NULL,
@@ -156,12 +216,14 @@ CREATE TABLE AlerteSanitaire (
 -- TABLES D'ASSOCIATION (relations n-n)
 -- ============================================================
 
+-- Lien entre les outils et les contributions
 CREATE TABLE sappliquer (
     id_outil INT NOT NULL REFERENCES Outil(id_outil),
     id_contribution INT NOT NULL REFERENCES Contribution(id_contribution),
     PRIMARY KEY (id_outil, id_contribution)
 );
 
+-- Suivi de la biodiversité observée par les utilisateurs
 CREATE TABLE observer (
     id_utilisateur INT NOT NULL REFERENCES Utilisateur(id_utilisateur),
     id_parcelle INT NOT NULL REFERENCES Parcelle(id_parcelle),
@@ -170,6 +232,7 @@ CREATE TABLE observer (
     PRIMARY KEY (id_utilisateur, id_parcelle, date_observation)
 );
 
+-- Liste d'attente pour l'obtention d'une parcelle
 CREATE TABLE s_inscrire (
     id_utilisateur INT NOT NULL REFERENCES Utilisateur(id_utilisateur),
     id_parcelle INT NOT NULL REFERENCES Parcelle(id_parcelle),
@@ -179,6 +242,7 @@ CREATE TABLE s_inscrire (
     PRIMARY KEY (id_utilisateur, id_parcelle)
 );
 
+-- Cartographie / Voisinage entre parcelles
 CREATE TABLE est_voisine_de (
     id_parcelle INT NOT NULL REFERENCES Parcelle(id_parcelle),
     id_parcelle_voisine INT NOT NULL REFERENCES Parcelle(id_parcelle),
@@ -186,6 +250,7 @@ CREATE TABLE est_voisine_de (
     CONSTRAINT chk_pas_autoref CHECK (id_parcelle <> id_parcelle_voisine)
 );
 
+-- Règles de compagnonnage (associations bénéfiques ou néfastes entre plantes)
 CREATE TABLE saccorder (
     id_plante_E1 INT NOT NULL REFERENCES Plante(id_plante),
     id_plante_E2 INT NOT NULL REFERENCES Plante(id_plante),
@@ -194,12 +259,14 @@ CREATE TABLE saccorder (
     CONSTRAINT chk_pas_autoref CHECK (id_plante_E1 <> id_plante_E2)
 );
 
+-- Pertinence d'un conseil en fonction des conditions météo
 CREATE TABLE justifier (
     id_meteo INT NOT NULL REFERENCES Meteo(id_meteo),
     id_conseil INT NOT NULL REFERENCES ConseilCultural(id_conseil),
     PRIMARY KEY (id_meteo, id_conseil)
 );
 
+-- Lien entre une contribution et le stock de semences associé
 CREATE TABLE porter_sur (
     id_contribution INT NOT NULL REFERENCES Contribution(id_contribution),
     id_semence INT NOT NULL REFERENCES Semence(id_semence),
@@ -207,6 +274,7 @@ CREATE TABLE porter_sur (
     PRIMARY KEY (id_contribution, id_semence)
 );
 
+-- Suivi des mises à jour des fiches plantes par les tuteurs
 CREATE TABLE modifier_tuteur (
     id_utilisateur INT NOT NULL REFERENCES Utilisateur(id_utilisateur),
     id_plante INT NOT NULL REFERENCES Plante(id_plante),
@@ -215,12 +283,17 @@ CREATE TABLE modifier_tuteur (
 );
 
 -- ============================================================
--- CONTRAINTE : max 2 attributions actives par utilisateur
+-- CONTRAINTES COMPLEXES (Triggers et Fonctions)
 -- ============================================================
 
+/**
+ * Règle de gestion : Un utilisateur ne peut posséder plus de 2 parcelles simultanément.
+ * Fonction exécutée via trigger avant chaque insertion dans `Attribution`.
+ */
 CREATE OR REPLACE FUNCTION check_max_attributions_actives()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- Compte les attributions en cours (sans date de fin) pour l'utilisateur
     IF (
         SELECT COUNT(*) FROM Attribution
         WHERE id_utilisateur_fournir = NEW.id_utilisateur_fournir
@@ -236,15 +309,16 @@ CREATE TRIGGER trg_max_attributions_actives
 BEFORE INSERT ON Attribution
 FOR EACH ROW EXECUTE FUNCTION check_max_attributions_actives();
 
--- ============================================================
--- CONTRAINTE : date_publication >= date_inscription de l'auteur
--- ============================================================
 
+/**
+ * Règle de gestion : Un conseil ne peut pas être publié avant l'inscription de son auteur.
+ */
 CREATE OR REPLACE FUNCTION check_conseil_date_publication()
 RETURNS TRIGGER AS $$
 DECLARE
     v_date_inscription DATE;
 BEGIN
+    -- Récupère la date d'inscription du tuteur
     SELECT date_inscription INTO v_date_inscription
     FROM Utilisateur WHERE id_utilisateur = NEW.id_utilisateur_redigtuteur;
 
@@ -259,15 +333,16 @@ CREATE TRIGGER trg_conseil_date_publication
 BEFORE INSERT OR UPDATE ON ConseilCultural
 FOR EACH ROW EXECUTE FUNCTION check_conseil_date_publication();
 
--- ============================================================
--- CONTRAINTE : date_semis >= date_attribution de l'attribution liée
--- ============================================================
 
+/**
+ * Règle de gestion : Impossible de semer sur une parcelle avant qu'elle ne soit attribuée.
+ */
 CREATE OR REPLACE FUNCTION check_culture_date_semis()
 RETURNS TRIGGER AS $$
 DECLARE
     v_date_attr DATE;
 BEGIN
+    -- Récupère la date de l'attribution concernée
     SELECT date_attribution INTO v_date_attr
     FROM Attribution WHERE id_attribution = NEW.id_attribution_seffectuer;
 
@@ -282,15 +357,16 @@ CREATE TRIGGER trg_culture_date_semis
 BEFORE INSERT OR UPDATE ON Culture
 FOR EACH ROW EXECUTE FUNCTION check_culture_date_semis();
 
--- ============================================================
--- CONTRAINTE : date_recolte >= date_semis de la culture liée
--- ============================================================
 
+/**
+ * Règle de gestion : Une récolte doit chronologiquement suivre le semis.
+ */
 CREATE OR REPLACE FUNCTION check_recolte_date()
 RETURNS TRIGGER AS $$
 DECLARE
     v_date_semis DATE;
 BEGIN
+    -- Récupère la date du semis d'origine
     SELECT date_semis INTO v_date_semis
     FROM Culture WHERE id_culture = NEW.id_culture_produire;
 
@@ -305,15 +381,16 @@ CREATE TRIGGER trg_recolte_date
 BEFORE INSERT OR UPDATE ON Recolte
 FOR EACH ROW EXECUTE FUNCTION check_recolte_date();
 
--- ============================================================
--- CONTRAINTE : date_detection >= date_semis de la culture liée
--- ============================================================
 
+/**
+ * Règle de gestion : Une maladie ne peut être signalée qu'après la mise en culture de la plante.
+ */
 CREATE OR REPLACE FUNCTION check_alerte_date()
 RETURNS TRIGGER AS $$
 DECLARE
     v_date_semis DATE;
 BEGIN
+    -- Récupère la date du semis lié à l'alerte
     SELECT date_semis INTO v_date_semis
     FROM Culture WHERE id_culture = NEW.id_culture_est_signalee_sur;
 
