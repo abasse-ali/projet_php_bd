@@ -119,7 +119,7 @@ function obtenir_nom_complet(PDO $bdd) {
         return 'Utilisateur';
     }
     $requete = $bdd->prepare("SELECT prenomU, nomU FROM Utilisateur WHERE id_utilisateur = ?");
-    $requete->execute([$SESSION['id_utilisateur']]);
+    $requete->execute([$_SESSION['id_utilisateur']]);
     $donnees = $requete->fetch();
     if ($donnees) {
         return htmlspecialchars($donnees['prenomu'] . ' ' . $donnees['nomu']);
