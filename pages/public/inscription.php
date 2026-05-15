@@ -1,12 +1,5 @@
 <?php
-/**
- * pages/public/inscription.php
- *
- * Script de gestion de l'inscription des utilisateurs.
- * Traite les données du formulaire, applique les validations nécessaires,
- * chiffre le mot de passe, enregistre le nouvel utilisateur en tant que 'Visiteur'
- * et l'ajoute automatiquement sur la liste d'attente du foncier (table `s_inscrire`).
- */
+// pages/public/inscription.php
 
 // Si l'utilisateur est déjà connecté, redirection immédiate vers la page d'accueil
 if (isset($_SESSION['id_utilisateur'])) {
@@ -61,17 +54,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        // Préparation des données d'insertion (hachage sécurisé et rôle par défaut)
         $password_hash = password_hash($mot_de_passe, PASSWORD_BCRYPT);
         $role_par_defaut = 'Visiteur';
 
-        // --- ON DÉSACTIVE LES TRANSACTIONS POUR LE DEBUG ---
-        // $bdd->beginTransaction(); 
+        // --- MODE DEBUG : ON DÉSACTIVE LES TRANSACTIONS ---
+        // $bdd->beginTransaction();
 
+        // Insertion du nouvel utilisateur (RETURNING id_utilisateur)
         $requeteInsert = $bdd->prepare("INSERT INTO Utilisateur (nomU, prenomU, email, mot_de_passe, roleU, date_inscription) VALUES (?, ?, ?, ?, ?, CURRENT_DATE) RETURNING id_utilisateur");
         $requeteInsert->execute([$nom, $prenom, $email, $password_hash, $role_par_defaut]);
         
         $id_utilisateur = $requeteInsert->fetchColumn();
 
+        // Inscription sur la liste d'attente
         $id_parcelle = $bdd->query("SELECT id_parcelle FROM Parcelle ORDER BY id_parcelle LIMIT 1")->fetchColumn();
         if ($id_parcelle) {
             $requeteAttente = $bdd->prepare("INSERT INTO s_inscrire (id_utilisateur, id_parcelle, date_demande, priorite, motivation) VALUES (?, ?, CURRENT_DATE, 1, ?)");
@@ -79,15 +75,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // $bdd->commit();
+        unset($_SESSION['register_old']);
         
-        // Si ça passe, on arrête tout pour afficher un message de victoire :
+        // --- MODE DEBUG : ON ARRÊTE LE SCRIPT SI TOUT MARCHE ---
         die("SUCCÈS ! L'utilisateur a été inséré avec l'ID : " . $id_utilisateur);
 
     } catch (PDOException $e) {
-        // L'ERREUR EXACTE S'AFFICHERA ICI :
+        // --- MODE DEBUG : ON AFFICHE L'ERREUR EXACTE ---
         die("VOICI LA VRAIE ERREUR SQL : " . $e->getMessage());
     }
-}
 }
 
 $titre = "Inscription - La Bòstia Verda";
@@ -122,9 +118,6 @@ if (isset($_GET['msg'])) {
     }
 }
 
-/**
- * @var array $old Récupération des anciennes valeurs pour pré-remplir le formulaire en cas d'erreur de saisie.
- */
 $old = $_SESSION['register_old'] ?? ['nom' => '', 'prenom' => '', 'email' => ''];
 ?>
 
