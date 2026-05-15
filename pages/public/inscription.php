@@ -61,44 +61,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Préparation des données d'insertion (hachage sécurisé et rôle par défaut)
         $password_hash = password_hash($mot_de_passe, PASSWORD_BCRYPT);
         $role_par_defaut = 'Visiteur';
 
-        // Début de la transaction pour lier la création de compte et l'inscription sur liste d'attente
-        $bdd->beginTransaction();
+        // --- ON DÉSACTIVE LES TRANSACTIONS POUR LE DEBUG ---
+        // $bdd->beginTransaction(); 
 
-        // Insertion du nouvel utilisateur - AJOUT DE LA CLAUSE RETURNING POUR POSTGRESQL
         $requeteInsert = $bdd->prepare("INSERT INTO Utilisateur (nomU, prenomU, email, mot_de_passe, roleU, date_inscription) VALUES (?, ?, ?, ?, ?, CURRENT_DATE) RETURNING id_utilisateur");
         $requeteInsert->execute([$nom, $prenom, $email, $password_hash, $role_par_defaut]);
         
-        // RÉCUPÉRATION DE L'ID AVEC fetchColumn() AU LIEU DE lastInsertId()
         $id_utilisateur = $requeteInsert->fetchColumn();
 
-        // Inscription sur la liste d'attente pour la première parcelle disponible (si la table Parcelle existe)
         $id_parcelle = $bdd->query("SELECT id_parcelle FROM Parcelle ORDER BY id_parcelle LIMIT 1")->fetchColumn();
         if ($id_parcelle) {
             $requeteAttente = $bdd->prepare("INSERT INTO s_inscrire (id_utilisateur, id_parcelle, date_demande, priorite, motivation) VALUES (?, ?, CURRENT_DATE, 1, ?)");
             $requeteAttente->execute([$id_utilisateur, $id_parcelle, "Demande d'inscription au jardin partagé"]);
         }
 
-        // Validation de l'ensemble des opérations
-        $bdd->commit();
-        unset($_SESSION['register_old']);
-        header("Location: index.php?page=inscription&msg=ok");
-        exit;
-    } catch (PDOException $e) {
-        // Annulation des modifications en cas d'échec SQL
-        if ($bdd->inTransaction()) $bdd->rollBack();
-        $_SESSION['register_old'] = compact('nom', 'prenom', 'email');
+        // $bdd->commit();
         
-        // NOTE TECHNIQUE : Si l'erreur persiste sur Render, enlevez les deux barres "//" 
-        // de la ligne ci-dessous pour afficher l'erreur brute PostgreSQL à l'écran.
-        die("Erreur SQL de debug : " . $e->getMessage());
+        // Si ça passe, on arrête tout pour afficher un message de victoire :
+        die("SUCCÈS ! L'utilisateur a été inséré avec l'ID : " . $id_utilisateur);
 
-        header("Location: index.php?page=inscription&msg=db_err");
-        exit;
+    } catch (PDOException $e) {
+        // L'ERREUR EXACTE S'AFFICHERA ICI :
+        die("VOICI LA VRAIE ERREUR SQL : " . $e->getMessage());
     }
+}
 }
 
 $titre = "Inscription - La Bòstia Verda";
